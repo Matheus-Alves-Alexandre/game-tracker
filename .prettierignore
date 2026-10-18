@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src-tauri/
+.tools/
+analise/
+PLANO_DO_PRODUTO.md
+reports/
+LICENSE
+package-lock.json

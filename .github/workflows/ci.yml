@@ -1,0 +1,115 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Check interface, formatting and build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path reports -Force | Out-Null
+          npm run check 2>&1 | Tee-Object reports/typescript.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run format:check 2>&1 | Tee-Object reports/format.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:ui 2>&1 | Tee-Object reports/frontend.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build 2>&1 | Tee-Object reports/frontend-build.log
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: frontend-reports
+          path: reports/
+          retention-days: 14
+  backend:
+    name: Backend
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
+      - run: npm ci
+      - run: npm run build
+      - name: Check Rust formatting, lint and persistence
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path reports -Force | Out-Null
+          cargo fmt --manifest-path src-tauri/Cargo.toml -- --check 2>&1 | Tee-Object reports/rust-format.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings 2>&1 | Tee-Object reports/clippy.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:backend 2>&1 | Tee-Object reports/backend.log
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: backend-reports
+          path: reports/
+          retention-days: 14
+  application:
+    name: Application
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: rustup toolchain install stable --profile minimal
+      - run: npm ci
+      - name: Install native test drivers
+        shell: pwsh
+        run: |
+          cargo install tauri-driver --locked --root .tools/tauri-driver
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./scripts/install-webdriver.ps1
+      - name: Build and test native application
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path reports -Force | Out-Null
+          npm run desktop:build -- --debug --no-bundle --config src-tauri/tauri.e2e.conf.json 2>&1 | Tee-Object reports/desktop-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:desktop 2>&1 | Tee-Object reports/desktop.log
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: application-reports
+          path: reports/
+          retention-days: 14
+  required:
+    name: Required checks
+    if: always()
+    needs: [frontend, backend, application]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail closed unless all checks succeeded
+        env:
+          FRONTEND: ${{ needs.frontend.result }}
+          BACKEND: ${{ needs.backend.result }}
+          APPLICATION: ${{ needs.application.result }}
+        run: test "$FRONTEND" = success && test "$BACKEND" = success && test "$APPLICATION" = success

@@ -1,0 +1,44 @@
+{
+  "name": "game-tracker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "description": "A lightweight, local-first desktop game library and backlog tracker built with Rust, Tauri and React.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "desktop:dev": "node scripts/desktop.mjs dev",
+    "desktop:build": "node scripts/desktop.mjs build",
+    "test": "vitest run",
+    "test:ui": "vitest run --reporter=default --reporter=junit --outputFile.junit=reports/frontend.xml",
+    "test:backend": "node scripts/cargo.mjs test --manifest-path src-tauri/Cargo.toml --locked",
+    "test:desktop": "node --test tests/desktop.test.mjs",
+    "check": "tsc --noEmit",
+    "format": "prettier --write src scripts tests *.json *.ts *.md .github",
+    "format:check": "prettier --check src scripts tests *.json *.ts *.md .github"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/node": "26.6.5",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "30.1.3",
+    "prettier": "3.9.10",
+    "selenium-webdriver": "4.51.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "5.0.5"
+  }
+}

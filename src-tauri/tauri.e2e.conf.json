@@ -1,0 +1,4 @@
+{
+  "identifier": "io.github.matheus-alves-alexandre.game-tracker.e2e",
+  "app": { "windows": [{ "label": "main", "title": "Game Tracker — automated test", "width": 1120, "height": 760 }] }
+}
