@@ -17,6 +17,8 @@ Each claim has one primary evidence path. Renderer tests do not prove SQLite per
 
 The test configuration changes the application identifier. The test creates a unique title and archives it before cleanup. Do not delete production application data. Screenshots and driver logs are written into ignored `reports/`. CI uploads diagnostics even when tests fail, with 14-day retention. GitHub repository log retention is configured separately to 14 days.
 
+Windows runners execute elevated by default. Recent WebView2 versions ignore environment-provided debugging switches in elevated hosts, preventing WebDriver from creating a session. CI runs the native test chain at Medium integrity using gsudo, with access granted only to the ephemeral checkout. This follows the [Tauri project's own CI approach](https://github.com/tauri-apps/tauri/blob/dev/.github/workflows/test-api-e2e.yml). It does not change production browser security flags or relax any required check.
+
 ## Performance acceptance
 
 Reference machine: Windows 11 x64, 8 GB RAM, SSD and integrated graphics. Record actual hardware, WebView2 version and display scale. Use installed production builds without development servers or inspectors.
