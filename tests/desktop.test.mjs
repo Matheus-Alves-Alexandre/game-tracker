@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { Builder, By, until, Select } from 'selenium-webdriver';
+import { Builder, By, Key, until, Select } from 'selenium-webdriver';
 import { toolchainEnvironment } from '../scripts/environment.mjs';
 
 test(
@@ -80,7 +80,13 @@ test(
     const findGame = async (value) => {
       await waitForSave();
       const search = await driver.findElement(By.css('input[type="search"]'));
-      await search.clear();
+      // Native clear() can omit input events and leave React state unchanged.
+      await search.sendKeys(Key.chord(Key.CONTROL, 'a'), Key.BACK_SPACE);
+      await driver.wait(
+        async () => (await search.getAttribute('value')) === '',
+        5000,
+        'Search must be empty before typing the next query',
+      );
       await typeText(search, value);
       return driver.wait(
         until.elementLocated(
