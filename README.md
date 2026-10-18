@@ -82,7 +82,7 @@ npm run desktop:build -- --debug --no-bundle --config src-tauri/tauri.e2e.conf.j
 npm run test:desktop
 ```
 
-The native test uses a separate application identifier, creates a uniquely named game, verifies persistence across application sessions, and archives the test record. It must never run against your personal production library. See [verification](docs/VERIFICATION.md).
+The native test uses a separate application identifier, creates a uniquely named game, reloads the interface to read persisted edits through Rust IPC, and archives the test record. Backend tests separately verify closing and reopening the SQLite file. It must never run against your personal production library. See [verification](docs/VERIFICATION.md).
 
 ## CI and release policy
 

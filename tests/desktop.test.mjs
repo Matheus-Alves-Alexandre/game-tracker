@@ -8,7 +8,7 @@ import { Builder, By, until, Select } from 'selenium-webdriver';
 import { toolchainEnvironment } from '../scripts/environment.mjs';
 
 test(
-  'native library survives restart, supports editing and archive undo',
+  'native library saves through IPC, reloads persisted edits and supports archive undo',
   { timeout: 180_000 },
   async () => {
     const reportPath = path.resolve('reports');
@@ -65,10 +65,23 @@ test(
           15_000,
         )
       ).click();
+    const typeText = async (element, value) => {
+      // Separate key commands let the controlled input settle on slower runners.
+      for (const character of value) await element.sendKeys(character);
+      assert.equal(await element.getAttribute('value'), value);
+    };
+    const waitForSave = () =>
+      driver.wait(
+        async () =>
+          (await driver.findElements(By.css('[role="dialog"]'))).length === 0,
+        15_000,
+        'The game editor should close only after persistence succeeds',
+      );
     const findGame = async (value) => {
+      await waitForSave();
       const search = await driver.findElement(By.css('input[type="search"]'));
       await search.clear();
-      await search.sendKeys(value);
+      await typeText(search, value);
       return driver.wait(
         until.elementLocated(
           By.xpath(`//button[normalize-space(.)='${value}']`),
@@ -95,10 +108,11 @@ test(
       }
       assert.ok(ready, 'Native WebDriver must start');
       driver = await connect();
+      console.info('Native session created; entering a game.');
       await clickText('+ Add game');
-      await driver.findElement(By.name('title')).sendKeys(title);
-      await driver.findElement(By.name('platform')).sendKeys('PC');
-      await driver.findElement(By.name('minutes')).sendKeys('90');
+      await typeText(await driver.findElement(By.name('title')), title);
+      await typeText(await driver.findElement(By.name('platform')), 'PC');
+      await typeText(await driver.findElement(By.name('minutes')), '90');
       await new Select(
         await driver.findElement(By.name('status')),
       ).selectByValue('completed');
@@ -106,6 +120,7 @@ test(
         await driver.findElement(By.name('rating')),
       ).selectByValue('4');
       await clickText('Save game');
+      console.info('Save submitted; checking the stored game.');
       const game = await findGame(title);
       await game.click();
       assert.equal(
@@ -113,15 +128,20 @@ test(
         '90',
       );
       const notes = await driver.findElement(By.name('notes'));
-      await notes.sendKeys('Persistence verified across native sessions.');
+      await typeText(
+        notes,
+        'Persistence verified after reloading the interface.',
+      );
       await clickText('Save game');
       await findGame(title);
-      await driver.quit();
-      driver = await connect();
+      console.info(
+        'Edit saved; reloading the renderer to read through IPC again.',
+      );
+      await driver.navigate().refresh();
       await (await findGame(title)).click();
       assert.equal(
         await driver.findElement(By.name('notes')).getAttribute('value'),
-        'Persistence verified across native sessions.',
+        'Persistence verified after reloading the interface.',
       );
       assert.equal(
         await driver.findElement(By.name('rating')).getAttribute('value'),
@@ -148,6 +168,20 @@ test(
     } catch (error) {
       if (driver) {
         try {
+          await fs.writeFile(
+            path.join(reportPath, 'desktop-state.json'),
+            JSON.stringify(
+              {
+                expectedTitle: title,
+                search: await driver
+                  .findElement(By.css('input[type="search"]'))
+                  .getAttribute('value'),
+                visibleText: await driver.findElement(By.css('body')).getText(),
+              },
+              null,
+              2,
+            ),
+          );
           await fs.writeFile(
             path.join(reportPath, 'desktop-failure.png'),
             await driver.takeScreenshot(),
