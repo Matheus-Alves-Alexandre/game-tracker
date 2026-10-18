@@ -87,7 +87,9 @@ jobs:
           cargo install tauri-driver --locked --root .tools/tauri-driver
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./scripts/install-webdriver.ps1
-          choco install gsudo --yes --no-progress
+          choco install gsudo --version=2.6.1 --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & 'C:\tools\gsudo\Current\gsudo.exe' --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build and test native application
         shell: pwsh
@@ -99,7 +101,7 @@ jobs:
           # Run the native application at the same integrity level as a normal user.
           icacls "$env:GITHUB_WORKSPACE" /grant 'Everyone:(OI)(CI)F'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          gsudo --integrity Medium cmd /c "npm run test:desktop" 2>&1 | Tee-Object reports/desktop.log
+          & 'C:\tools\gsudo\Current\gsudo.exe' --integrity Medium cmd /c "npm run test:desktop" 2>&1 | Tee-Object reports/desktop.log
           exit $LASTEXITCODE
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
