@@ -16,8 +16,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
@@ -32,9 +32,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run test:ui 2>&1 | Tee-Object reports/frontend.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:site 2>&1 | Tee-Object reports/website.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build 2>&1 | Tee-Object reports/frontend-build.log
           exit $LASTEXITCODE
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: frontend-reports
@@ -45,8 +47,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '24'
           cache: npm
@@ -63,7 +65,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run test:backend 2>&1 | Tee-Object reports/backend.log
           exit $LASTEXITCODE
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: backend-reports
@@ -74,8 +76,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '24'
           cache: npm
@@ -87,15 +89,23 @@ jobs:
           cargo install tauri-driver --locked --root .tools/tauri-driver
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./scripts/install-webdriver.ps1
+          choco install gsudo --version=2.6.1 --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & 'C:\tools\gsudo\Current\gsudo.exe' --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build and test native application
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path reports -Force | Out-Null
           npm run desktop:build -- --debug --no-bundle --config src-tauri/tauri.e2e.conf.json 2>&1 | Tee-Object reports/desktop-build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run test:desktop 2>&1 | Tee-Object reports/desktop.log
+          # Recent WebView2 ignores driver arguments in elevated hosts.
+          # Run the native application at the same integrity level as a normal user.
+          icacls "$env:GITHUB_WORKSPACE" /grant 'Everyone:(OI)(CI)F'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & 'C:\tools\gsudo\Current\gsudo.exe' --integrity Medium cmd /c "npm run test:desktop" 2>&1 | Tee-Object reports/desktop.log
           exit $LASTEXITCODE
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: application-reports

@@ -8,6 +8,8 @@ A lightweight, local-first desktop game library and backlog tracker built with *
 
 Track what you play, finish and return to. Keep your personal library on your own computer. No account, subscription or cloud service is required for the core application.
 
+**[Project website & downloads](https://matheus-alves-alexandre.github.io/game-tracker/)** · [Release history](https://github.com/Matheus-Alves-Alexandre/game-tracker/releases)
+
 ## Project status
 
 Early development. The first vertical slice supports creating and editing games, status and title/platform filters, optional ratings, playtime, completion dates, platinum goals, archival with immediate undo, and a persistent SQLite library. It is not the complete MVP yet.
@@ -69,6 +71,7 @@ npm run check
 npm run format:check
 npm run test:ui
 npm run test:backend
+npm run test:site
 node scripts/cargo.mjs fmt --manifest-path src-tauri/Cargo.toml -- --check
 node scripts/cargo.mjs clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
 ```
@@ -82,7 +85,7 @@ npm run desktop:build -- --debug --no-bundle --config src-tauri/tauri.e2e.conf.j
 npm run test:desktop
 ```
 
-The native test uses a separate application identifier, creates a uniquely named game, verifies persistence across application sessions, and archives the test record. It must never run against your personal production library. See [verification](docs/VERIFICATION.md).
+The native test uses a separate application identifier, creates a uniquely named game, reloads the interface to read persisted edits through Rust IPC, and archives the test record. Backend tests separately verify closing and reopening the SQLite file. It must never run against your personal production library. See [verification](docs/VERIFICATION.md).
 
 ## CI and release policy
 
@@ -91,6 +94,8 @@ The native test uses a separate application identifier, creates a uniquely named
 - A required aggregate check fails if any required job fails or is cancelled.
 - The release workflow reruns all checks on the selected `main` commit before building or publishing an installer and corresponding source archive.
 - Repository protection and log retention must also be applied in GitHub settings; workflow files alone do not protect a branch. The repository setup script verifies those settings.
+
+The [project website](https://matheus-alves-alexandre.github.io/game-tracker/) deploys through GitHub Pages after a successful CI push run on `main`. Its download button follows the latest published installer automatically. Before the first release, it clearly displays that no installer is published yet. This updates the website download; it does not automatically update an installed app. See [website and release flow](docs/WEBSITE.md).
 
 ## Data and performance
 

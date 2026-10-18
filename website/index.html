@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Game Tracker is an open-source, local-first desktop game library and backlog tracker built with Rust, Tauri and React. Download for Windows."
+    />
+    <meta name="theme-color" content="#11151b" />
+    <meta
+      property="og:title"
+      content="Game Tracker — Your personal desktop game library"
+    />
+    <meta
+      property="og:description"
+      content="Track your backlog, playtime and finished games. Local-first. Open source. Built for Windows."
+    />
+    <title>Game Tracker — Your personal desktop game library</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="latest-release.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="brand" href="./"
+          ><img src="icon.svg" width="36" height="36" alt="" /><span
+            >Game Tracker</span
+          ></a
+        >
+        <nav aria-label="Main navigation">
+          <a href="#features">Features</a><a href="#download">Download</a
+          ><a href="https://github.com/Matheus-Alves-Alexandre/game-tracker"
+            >GitHub ↗</a
+          >
+        </nav>
+      </header>
+      <main id="main">
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">
+              <span class="dot"></span> LOCAL-FIRST · OPEN SOURCE
+            </p>
+            <h1>A home for every<br />game you play.</h1>
+            <p class="intro">
+              Keep your backlog, playtime and finished games in a desktop
+              library that lives on your computer.
+            </p>
+            <div class="hero-actions">
+              <a class="button gold" href="#download"
+                >Get Game Tracker <span aria-hidden="true">↓</span></a
+              ><a
+                class="text-link"
+                href="https://github.com/Matheus-Alves-Alexandre/game-tracker"
+                >Explore the source ↗</a
+              >
+            </div>
+            <p class="hero-note">
+              Windows x64 <span>·</span> No account required
+              <span>·</span> Early development
+            </p>
+          </div>
+          <div
+            class="preview"
+            aria-label="Illustrative preview of a game library"
+          >
+            <div class="window-bar">
+              <span class="window-dots" aria-hidden="true">● ● ●</span
+              ><span>Game Tracker</span
+              ><span class="local-label">● Local library</span>
+            </div>
+            <div class="preview-body">
+              <p class="mini-label">YOUR COLLECTION</p>
+              <h2>A little progress. A great story.</h2>
+              <div class="mini-stats">
+                <div><span>Games</span><strong>24</strong></div>
+                <div><span>Completed</span><strong>12</strong></div>
+                <div><span>Playing</span><strong>3</strong></div>
+              </div>
+              <div class="mock-heading">
+                <span>Library</span
+                ><span class="mock-search">Search your games</span>
+              </div>
+              <div class="mock-game">
+                <span class="cover violet" aria-hidden="true">MV</span>
+                <div><strong>Moonlit Vale</strong><small>PC</small></div>
+                <span class="status completed">Completed</span
+                ><span class="mock-time">18h 30m</span>
+              </div>
+              <div class="mock-game">
+                <span class="cover amber" aria-hidden="true">NC</span>
+                <div><strong>Neon Circuit</strong><small>PC</small></div>
+                <span class="status playing">Playing</span
+                ><span class="mock-time">6h 15m</span>
+              </div>
+              <div class="mock-game">
+                <span class="cover green" aria-hidden="true">FF</span>
+                <div><strong>Faraway Fields</strong><small>Switch</small></div>
+                <span class="status planned">Planned</span
+                ><span class="mock-time">—</span>
+              </div>
+              <p class="preview-caption">
+                Interface illustration with fictional sample data.
+              </p>
+            </div>
+          </div>
+        </section>
+        <div class="stack-line">
+          <span>Built with tools we trust.</span><span>RUST</span
+          ><span>TAURI</span><span>REACT</span><span>SQLITE</span>
+        </div>
+        <section id="features" class="features section">
+          <div class="section-heading">
+            <p class="eyebrow">LESS BOOKKEEPING. MORE PLAYING.</p>
+            <h2>Keep the story of your library.</h2>
+            <p>
+              A personal record of the games you care about, with room for the
+              ones you will return to.
+            </p>
+          </div>
+          <div class="feature-grid">
+            <article>
+              <span class="feature-number">01 / ORGANIZE</span>
+              <h3>Find your next game.</h3>
+              <p>
+                Search titles and platforms. See what is planned, in progress,
+                paused, finished or dropped.
+              </p>
+            </article>
+            <article>
+              <span class="feature-number">02 / REMEMBER</span>
+              <h3>Record your experience.</h3>
+              <p>
+                Keep personal ratings, playtime, completion dates, platinum
+                goals and a few notes for later.
+              </p>
+            </article>
+            <article>
+              <span class="feature-number">03 / KEEP</span>
+              <h3>Your library stays local.</h3>
+              <p>
+                Your records live in SQLite on your computer. The core app works
+                offline and needs no account.
+              </p>
+            </article>
+          </div>
+        </section>
+        <section
+          class="development section"
+          aria-labelledby="development-title"
+        >
+          <div>
+            <p class="eyebrow">A SMALL APP, BUILT IN THE OPEN</p>
+            <h2 id="development-title">Useful now.<br />Room to grow.</h2>
+          </div>
+          <div>
+            <p>
+              Game Tracker is in early development. The first working slice
+              focuses on a persistent personal library.
+            </p>
+            <ul>
+              <li>
+                <span class="roadmap-state ready">Available in source</span>
+                Library, ratings, time and progress
+              </li>
+              <li>
+                <span class="roadmap-state next">Next</span> Backup, spreadsheet
+                import and sagas
+              </li>
+              <li>
+                <span class="roadmap-state later">Planned</span> Cover lookup
+                and achievement integrations
+              </li>
+            </ul>
+            <p class="small">
+              Designed to stay lightweight. Memory and CPU budgets are tracked
+              as the app grows; full workload benchmarks are still pending.
+            </p>
+            <a
+              class="text-link"
+              href="https://github.com/Matheus-Alves-Alexandre/game-tracker/blob/main/docs/ROADMAP.md"
+              >Follow the roadmap ↗</a
+            >
+          </div>
+        </section>
+        <section id="download" class="download section">
+          <div>
+            <p class="eyebrow">YOUR NEXT CHAPTER</p>
+            <h2>Take your library<br />with you. Offline.</h2>
+            <p>
+              Get the latest published Windows installer. No Rust or Node.js
+              installation needed.
+            </p>
+          </div>
+          <div class="download-panel">
+            <span id="release-version" class="release-badge">WINDOWS X64</span>
+            <h3>Game Tracker for Windows</h3>
+            <p id="release-status" role="status" aria-live="polite">
+              Checking for the latest release…
+            </p>
+            <a
+              id="download-button"
+              class="button gold download-button"
+              aria-disabled="true"
+              tabindex="-1"
+              >Checking availability…</a
+            ><a
+              class="release-link"
+              href="https://github.com/Matheus-Alves-Alexandre/game-tracker/releases"
+              >Release notes & previous versions ↗</a
+            >
+            <p class="small">
+              Early builds are unsigned. WebView2 is required; the installer can
+              obtain it when missing. Back up your records before updating.
+            </p>
+            <noscript
+              ><p>
+                <a
+                  href="https://github.com/Matheus-Alves-Alexandre/game-tracker/releases"
+                  >View releases and download the Windows installer on
+                  GitHub.</a
+                >
+              </p></noscript
+            >
+          </div>
+        </section>
+        <section class="support section">
+          <div>
+            <h2>Help shape what comes next.</h2>
+            <p>
+              Report a bug, suggest an improvement or contribute code. If you
+              like the project, you can also support its development.
+            </p>
+          </div>
+          <div class="support-actions">
+            <a
+              class="button outline"
+              href="https://github.com/Matheus-Alves-Alexandre/game-tracker/issues"
+              >Join the project ↗</a
+            ><a class="text-link" href="https://buymeacoffee.com/xxlozerxd"
+              >Buy me a coffee ↗</a
+            >
+          </div>
+        </section>
+      </main>
+      <footer class="site-footer">
+        <span>© 2026 Matheus-Alves-Alexandre & contributors</span>
+        <div>
+          <a
+            href="https://github.com/Matheus-Alves-Alexandre/game-tracker/blob/main/LICENSE"
+            >AGPL-3.0-only</a
+          ><a href="https://github.com/Matheus-Alves-Alexandre/game-tracker"
+            >GitHub</a
+          >
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
