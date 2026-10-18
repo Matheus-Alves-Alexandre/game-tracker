@@ -2,14 +2,14 @@
 
 ## Claims and evidence
 
-| Claim | Minimum evidence | Owner |
-| --- | --- | --- |
-| UI sends correct units and preserves unsaved work on errors | Renderer tests using IPC mocks | Frontend check |
-| Data is validated, persisted and updated atomically | Rust tests against temporary SQLite databases, including reopen | Backend check |
-| Native UI and Rust IPC actually work together | Windows WebDriver test creates, edits and reloads the interface to read persisted records through IPC | Application check |
-| The installer is buildable | NSIS build in the release workflow | Release job |
-| A failed or cancelled required check blocks publication | Reusable checks plus fail-closed aggregate job and release dependencies | CI configuration |
-| The app meets the memory target | Installed production build measurements, not renderer mocks | Performance milestone |
+| Claim                                                       | Minimum evidence                                                                                      | Owner                 |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------- |
+| UI sends correct units and preserves unsaved work on errors | Renderer tests using IPC mocks                                                                        | Frontend check        |
+| Data is validated, persisted and updated atomically         | Rust tests against temporary SQLite databases, including reopen                                       | Backend check         |
+| Native UI and Rust IPC actually work together               | Windows WebDriver test creates, edits and reloads the interface to read persisted records through IPC | Application check     |
+| The installer is buildable                                  | NSIS build in the release workflow                                                                    | Release job           |
+| A failed or cancelled required check blocks publication     | Reusable checks plus fail-closed aggregate job and release dependencies                               | CI configuration      |
+| The app meets the memory target                             | Installed production build measurements, not renderer mocks                                           | Performance milestone |
 
 Each claim has one primary evidence path. Renderer tests do not prove SQLite persistence; Rust tests do not prove webview IPC; neither proves installer behavior.
 

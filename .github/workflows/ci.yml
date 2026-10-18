@@ -32,6 +32,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run test:ui 2>&1 | Tee-Object reports/frontend.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:site 2>&1 | Tee-Object reports/website.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build 2>&1 | Tee-Object reports/frontend-build.log
           exit $LASTEXITCODE
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
