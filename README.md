@@ -10,6 +10,8 @@ Track what you play, finish and return to. Keep your personal library on your ow
 
 **[Project website & downloads](https://matheus-alves-alexandre.github.io/game-tracker/)** · [Release history](https://github.com/Matheus-Alves-Alexandre/game-tracker/releases)
 
+[Twitch / IGDB connection tutorial](docs/IGDB.md) · A visual setup-guide page is included under `website/twitch-setup.html` for the next reviewed Pages deployment.
+
 ## Project status
 
 Early development. This branch supports creating and editing games, status and title/platform filters, optional ratings, playtime, completion dates, platinum goals, persistent archive recovery, keyboard-accessible dialogs and a persistent SQLite library. It is not the complete MVP yet.

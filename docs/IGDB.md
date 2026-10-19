@@ -2,6 +2,8 @@
 
 IGDB is optional. The local SQLite library, manual editing and all personal statistics work without credentials or an internet connection.
 
+A visual, English walkthrough is included in [`website/twitch-setup.html`](../website/twitch-setup.html). The site navigation links to it as Setup guide. It is published to GitHub Pages only after this branch is reviewed, merged and passes main CI; until then, these repository instructions remain available on the branch.
+
 ## Connect locally
 
 1. Use your own Twitch account with two-factor authentication enabled.
@@ -9,6 +11,25 @@ IGDB is optional. The local SQLite library, manual editing and all personal stat
 3. Generate the application's Client Secret.
 4. In Game Tracker, use the bottom sidebar gear to open **Settings → Integrations → Twitch / IGDB**, and enter the Client ID and Client Secret directly in the app. Never paste a secret into chat, a public issue, Git, screenshots or a browser build setting.
 5. Connect. The secret is sent to Twitch over HTTPS in a form body, not a URL. Rust retains only the application ID and access token in memory for this session. Closing the app or pressing Disconnect removes that session. Reconnect when it expires.
+
+### Registration checklist
+
+| Twitch field       | What to enter                                                     |
+| ------------------ | ----------------------------------------------------------------- |
+| Name               | A unique name, for example `Game Tracker IGDB — your username`    |
+| OAuth Redirect URL | `http://localhost`, then click Add                                |
+| Category           | The integration category appropriate to your application          |
+| Client Type        | **Confidential**, so IGDB credentials can include a Client Secret |
+
+After creating the application, open **Applications → Manage → New Secret**. Portuguese console labels are **Aplicativos → Gerenciar → Novo segredo**, and **Confidencial** is the required client type.
+
+**No New Secret button?** Your application may have been registered as Public. If Twitch locks the type, register a new Confidential application with a different unique name. Regenerating a secret invalidates the previous one; update the app connection when doing that.
+
+### Where the credentials go
+
+![Game Tracker Settings with the bottom sidebar gear and empty Twitch credential fields](../website/settings-example.png)
+
+This example has no credentials entered. Use the desktop Settings page, not the project website, chat or a public GitHub issue.
 
 There is deliberately no shared developer secret in the binary and no plaintext credential file. Persistent credential storage is not implemented. GitHub Pages never receives credentials. The UI clears the password field when submitting the connection request; the backend does not return tokens to the renderer or include remote response bodies in errors.
 
