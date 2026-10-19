@@ -15,7 +15,7 @@ Desktop window, persistent game records, edit, search, status filtering, ratings
 7. Planned-game priorities and CSV export.
 8. Measure memory/CPU and validate installed Windows updates.
 
-Optional next increment: local cover selection, IGDB lookup and a grid view with disk caching and bounded image loading. Keep core features offline. Later: achievements synchronization, replay sessions, annual goals, custom lists, portable packaging and additional operating systems.
+Implemented on the catalog/home branch: optional IGDB edition lookup, selected-cover disk caching, personal home cards and explicit metric coverage. Live authentication still requires the owner's own Twitch developer application. Local cover selection, a full library grid and OS-protected persistent credentials are future increments. Keep core features offline. Later: achievements synchronization, replay sessions, annual goals, custom lists, portable packaging and additional operating systems.
 
 ## Product rules
 

@@ -10,6 +10,17 @@ import type { Dashboard, Game, GameInput, Status } from './library-api';
 import license from '../LICENSE?raw';
 import './library.css';
 import Modal from './Modal';
+import Home from './Home';
+import Cover from './Cover';
+import CatalogLookup from './CatalogLookup';
+import Settings from './Settings';
+import {
+  House,
+  LibraryBig,
+  Archive,
+  Settings as SettingsIcon,
+  Info,
+} from 'lucide-react';
 
 const emptyGame: GameInput = {
   id: null,
@@ -21,8 +32,16 @@ const emptyGame: GameInput = {
   completedOn: null,
   platinumStatus: 'not_achieved',
   notes: '',
+  igdbId: null,
+  coverImageId: null,
+  igdbRating: null,
+  igdbRatingCount: null,
 };
-export default function Library() {
+export default function Library({
+  initialView = 'home',
+}: {
+  initialView?: 'home' | 'library';
+}) {
   const [games, setGames] = useState<Game[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [search, setSearch] = useState('');
@@ -34,6 +53,8 @@ export default function Library() {
   const [error, setError] = useState('');
   const [editor, setEditor] = useState<GameInput | null>(null);
   const [about, setAbout] = useState(false);
+  const [settingsView, setSettingsView] = useState(false);
+  const [homeView, setHomeView] = useState(initialView === 'home');
   const [archived, setArchived] = useState<Game | null>(null);
   const [archiveView, setArchiveView] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -122,28 +143,63 @@ export default function Library() {
         <p className="muted">Your games. Your journey.</p>
         <nav aria-label="Main navigation">
           <button
-            className={!archiveView ? 'nav-active' : ''}
-            aria-current={!archiveView ? 'page' : undefined}
+            className={homeView && !settingsView ? 'nav-active' : ''}
+            aria-current={homeView && !settingsView ? 'page' : undefined}
             onClick={() => {
+              setSettingsView(false);
+              setHomeView(true);
+            }}
+          >
+            <House size={18} />
+            Home
+          </button>
+          <button
+            className={
+              !archiveView && !homeView && !settingsView ? 'nav-active' : ''
+            }
+            aria-current={
+              !archiveView && !homeView && !settingsView ? 'page' : undefined
+            }
+            onClick={() => {
+              setSettingsView(false);
+              setHomeView(false);
               if (!archiveView) return;
               setArchiveView(false);
               setOffset(0);
               setLoading(true);
             }}
           >
+            <LibraryBig size={18} />
             Library
           </button>
           <button
-            className={archiveView ? 'nav-active' : ''}
-            aria-current={archiveView ? 'page' : undefined}
+            className={
+              archiveView && !homeView && !settingsView ? 'nav-active' : ''
+            }
+            aria-current={
+              archiveView && !homeView && !settingsView ? 'page' : undefined
+            }
             onClick={() => {
+              setSettingsView(false);
+              setHomeView(false);
               if (archiveView) return;
               setArchiveView(true);
               setOffset(0);
               setLoading(true);
             }}
           >
+            <Archive size={18} />
             Archived games
+          </button>
+        </nav>
+        <div className="sidebar-footer">
+          <button
+            className={settingsView ? 'nav-active' : ''}
+            aria-current={settingsView ? 'page' : undefined}
+            onClick={() => setSettingsView(true)}
+          >
+            <SettingsIcon size={19} />
+            Settings
           </button>
           <button
             onClick={(event) => {
@@ -151,49 +207,64 @@ export default function Library() {
               setAbout(true);
             }}
           >
+            <Info size={18} />
             About & support
           </button>
-        </nav>
-        <div className="local-note">
-          <span className="status-dot" /> Local library
-          <br />
-          <small>Stored on this computer</small>
+          <div className="local-note">
+            <span className="status-dot" /> Local library
+            <br />
+            <small>Stored on this computer</small>
+          </div>
         </div>
       </aside>
       <main inert={editor !== null || about}>
         <header>
           <div>
-            <p className="eyebrow">YOUR COLLECTION</p>
-            <h2>Make room for your next adventure.</h2>
+            <p className="eyebrow">
+              {settingsView ? 'YOUR PREFERENCES' : 'YOUR COLLECTION'}
+            </p>
+            <h2>
+              {settingsView
+                ? 'Settings'
+                : homeView
+                  ? 'Welcome back, player.'
+                  : 'Make room for your next adventure.'}
+            </h2>
             <p className="muted">
-              Keep track of what you play, finish, and come back to.
+              {settingsView
+                ? 'Manage optional game services and credentials.'
+                : 'Keep track of what you play, finish, and come back to.'}
             </p>
           </div>
-          <button
-            className="primary"
-            onClick={(event) => {
-              opener.current = event.currentTarget;
-              setError('');
-              setEditor({ ...emptyGame });
-            }}
-          >
-            + Add game
-          </button>
+          {!settingsView && (
+            <button
+              className="primary"
+              onClick={(event) => {
+                opener.current = event.currentTarget;
+                setError('');
+                setEditor({ ...emptyGame });
+              }}
+            >
+              + Add game
+            </button>
+          )}
         </header>
-        <section className="stats" aria-label="Library overview">
-          {[
-            ['Games', dashboard?.total],
-            ['Completed', dashboard?.completed],
-            ['Playing', dashboard?.playing],
-            ['Platinum', dashboard?.platinum],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <span>{label}</span>
-              <strong>{value ?? '—'}</strong>
-            </div>
-          ))}
-        </section>
-        {error && !editor && !about && (
+        {!homeView && !settingsView && (
+          <section className="stats" aria-label="Library overview">
+            {[
+              ['Games', dashboard?.total],
+              ['Completed', dashboard?.completed],
+              ['Playing', dashboard?.playing],
+              ['Platinum', dashboard?.platinum],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <strong>{value ?? '—'}</strong>
+              </div>
+            ))}
+          </section>
+        )}
+        {error && !editor && !about && !settingsView && (
           <div className="error" role="alert">
             {error}{' '}
             {!editor && (
@@ -201,7 +272,7 @@ export default function Library() {
             )}
           </div>
         )}
-        {archived && (
+        {archived && !settingsView && (
           <div className="notice" role="status">
             Archived {archived.title}.{' '}
             <button
@@ -212,140 +283,163 @@ export default function Library() {
             </button>
           </div>
         )}
-        <section className="library" aria-label="Game library">
-          <div className="toolbar">
-            <h3>{archiveView ? 'Archived games' : 'Library'}</h3>
-            <label className="search-label">
-              Search games
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => {
-                  setLoading(true);
-                  setSearch(event.target.value);
-                  setOffset(0);
-                }}
-                placeholder="Search title or platform"
-              />
-            </label>
-            <label>
-              Status filter
-              <select
-                value={status}
-                onChange={(event) => {
-                  setLoading(true);
-                  setStatus(event.target.value);
-                  setOffset(0);
-                }}
-              >
-                <option value="">All statuses</option>
-                {statuses.map((s) => (
-                  <option key={s} value={s}>
-                    {statusLabel(s)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {loading ? (
-            <p role="status" className="empty">
-              Loading your library…
-            </p>
-          ) : games.length === 0 ? (
-            <div className="empty">
-              <h3>
-                {search || status
-                  ? 'No matching games'
-                  : archiveView
-                    ? 'No archived games'
-                    : 'Your next chapter starts here'}
-              </h3>
-              <p>
-                {search || status
-                  ? 'Try a different search or status.'
-                  : archiveView
-                    ? 'Archived games stay here until you restore them.'
-                    : 'Add your first game to start building your library.'}
-              </p>
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Game</th>
-                    <th>Status</th>
-                    <th>Playtime</th>
-                    <th>Rating</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {games.map((game) => (
-                    <tr key={game.id}>
-                      <td>
-                        <button
-                          className="game-title"
-                          disabled={archiveView}
-                          onClick={(event) => {
-                            opener.current = event.currentTarget;
-                            setError('');
-                            setEditor({ ...game });
-                          }}
-                        >
-                          {game.title}
-                        </button>
-                        <small>{game.platform || 'Platform not set'}</small>
-                      </td>
-                      <td>
-                        <span className={`pill ${game.status}`}>
-                          {statusLabel(game.status)}
-                        </span>
-                      </td>
-                      <td>{formatPlaytime(game.playtimeSeconds)}</td>
-                      <td>
-                        {game.rating === null
-                          ? 'Not rated'
-                          : `${game.rating}/5`}
-                      </td>
-                      <td>
-                        <button
-                          aria-label={`${archiveView ? 'Restore' : 'Archive'} ${game.title}`}
-                          disabled={archiving}
-                          onClick={() => archive(game, !archiveView)}
-                        >
-                          {archiveView ? 'Restore' : 'Archive'}
-                        </button>
-                      </td>
-                    </tr>
+        {settingsView ? (
+          <Settings />
+        ) : homeView ? (
+          <Home
+            revision={revision}
+            dashboard={dashboard}
+            onLibrary={() => {
+              setHomeView(false);
+              setArchiveView(false);
+              setOffset(0);
+            }}
+            onOpen={(game, element) => {
+              opener.current = element;
+              setError('');
+              setEditor({ ...game });
+            }}
+          />
+        ) : (
+          <section className="library" aria-label="Game library">
+            <div className="toolbar">
+              <h3>{archiveView ? 'Archived games' : 'Library'}</h3>
+              <label className="search-label">
+                Search games
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => {
+                    setLoading(true);
+                    setSearch(event.target.value);
+                    setOffset(0);
+                  }}
+                  placeholder="Search title or platform"
+                />
+              </label>
+              <label>
+                Status filter
+                <select
+                  value={status}
+                  onChange={(event) => {
+                    setLoading(true);
+                    setStatus(event.target.value);
+                    setOffset(0);
+                  }}
+                >
+                  <option value="">All statuses</option>
+                  {statuses.map((s) => (
+                    <option key={s} value={s}>
+                      {statusLabel(s)}
+                    </option>
                   ))}
-                </tbody>
-              </table>
+                </select>
+              </label>
             </div>
-          )}
-          <footer>
-            <small>
-              {dashboard?.averageRating == null
-                ? 'No ratings yet'
-                : `Average rating: ${dashboard.averageRating.toFixed(2)}/5`}{' '}
-              · 100 games per page
-            </small>
-            <div>
-              <button
-                disabled={offset === 0 || loading}
-                onClick={() => setOffset((v) => v - 100)}
-              >
-                Previous
-              </button>
-              <button
-                disabled={games.length < 100 || loading}
-                onClick={() => setOffset((v) => v + 100)}
-              >
-                Next
-              </button>
-            </div>
-          </footer>
-        </section>
+            {loading ? (
+              <p role="status" className="empty">
+                Loading your library…
+              </p>
+            ) : games.length === 0 ? (
+              <div className="empty">
+                <h3>
+                  {search || status
+                    ? 'No matching games'
+                    : archiveView
+                      ? 'No archived games'
+                      : 'Your next chapter starts here'}
+                </h3>
+                <p>
+                  {search || status
+                    ? 'Try a different search or status.'
+                    : archiveView
+                      ? 'Archived games stay here until you restore them.'
+                      : 'Add your first game to start building your library.'}
+                </p>
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Game</th>
+                      <th>Status</th>
+                      <th>Playtime</th>
+                      <th>Rating</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {games.map((game) => (
+                      <tr key={game.id}>
+                        <td>
+                          <Cover
+                            imageId={game.coverImageId}
+                            className="table-cover"
+                          />
+                          <button
+                            className="game-title"
+                            disabled={archiveView}
+                            onClick={(event) => {
+                              opener.current = event.currentTarget;
+                              setError('');
+                              setEditor({ ...game });
+                            }}
+                          >
+                            {game.title}
+                          </button>
+                          <small>{game.platform || 'Platform not set'}</small>
+                        </td>
+                        <td>
+                          <span className={`pill ${game.status}`}>
+                            {statusLabel(game.status)}
+                          </span>
+                        </td>
+                        <td>{formatPlaytime(game.playtimeSeconds)}</td>
+                        <td>
+                          {game.rating === null
+                            ? 'Not rated'
+                            : `${game.rating}/5`}
+                        </td>
+                        <td>
+                          <button
+                            aria-label={`${archiveView ? 'Restore' : 'Archive'} ${game.title}`}
+                            disabled={archiving}
+                            onClick={() => archive(game, !archiveView)}
+                          >
+                            {archiveView ? 'Restore' : 'Archive'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <footer>
+              <small>
+                {dashboard?.averageRating == null
+                  ? 'No ratings yet'
+                  : `Average rating: ${dashboard.averageRating.toFixed(2)}/5`}{' '}
+                · 100 games per page
+              </small>
+              <div>
+                <button
+                  disabled={offset === 0 || loading}
+                  onClick={() => setOffset((v) => v - 100)}
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={games.length < 100 || loading}
+                  onClick={() => setOffset((v) => v + 100)}
+                >
+                  Next
+                </button>
+              </div>
+            </footer>
+          </section>
+        )}
       </main>
       {editor && (
         <Modal
@@ -366,6 +460,57 @@ export default function Library() {
                 onChange={(e) => change('title', e.target.value)}
               />
             </label>
+            <CatalogLookup
+              title={editor.title}
+              onSelect={(candidate) =>
+                setEditor((current) =>
+                  current
+                    ? {
+                        ...current,
+                        title: current.id ? current.title : candidate.name,
+                        igdbId: candidate.id,
+                        coverImageId: candidate.coverImageId,
+                        igdbRating: candidate.communityRating,
+                        igdbRatingCount: Math.min(
+                          candidate.ratingCount,
+                          4294967295,
+                        ),
+                      }
+                    : current,
+                )
+              }
+            />
+            {editor.igdbId && (
+              <div className="linked-game">
+                <Cover imageId={editor.coverImageId} />
+                <span>
+                  Linked to IGDB #{editor.igdbId}
+                  <small>
+                    {editor.igdbRating == null
+                      ? 'No community score available'
+                      : `IGDB community: ${editor.igdbRating.toFixed(0)}/100 (${editor.igdbRatingCount ?? 0} ratings)`}
+                  </small>
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditor((current) =>
+                      current
+                        ? {
+                            ...current,
+                            igdbId: null,
+                            coverImageId: null,
+                            igdbRating: null,
+                            igdbRatingCount: null,
+                          }
+                        : current,
+                    )
+                  }
+                >
+                  Remove link
+                </button>
+              </div>
+            )}
             <div className="form-grid">
               <label>
                 Platform
@@ -518,6 +663,10 @@ export default function Library() {
           <p>
             Support development with an optional donation. All features remain
             available.
+          </p>
+          <p>
+            Optional game metadata and artwork provided by IGDB. Community
+            ratings use a 100-point scale and never replace your personal score.
           </p>
           <div className="dialog-actions">
             {error && <p role="alert">{error}</p>}

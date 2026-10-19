@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 test('submits minutes as seconds and leaves an unrated game unknown', async () => {
   const user = userEvent.setup();
-  render(<Library />);
+  render(<Library initialView="library" />);
   await screen.findByText('Your next chapter starts here');
   await user.click(screen.getByRole('button', { name: '+ Add game' }));
   await user.type(screen.getByLabelText('Title'), 'Celeste');
@@ -54,7 +54,7 @@ test('keeps unsaved input visible when persistence fails', async () => {
     } as never;
   });
   const user = userEvent.setup();
-  render(<Library />);
+  render(<Library initialView="library" />);
   await user.click(screen.getByRole('button', { name: '+ Add game' }));
   await user.type(screen.getByLabelText('Title'), 'Unsaved game');
   await user.click(screen.getByRole('button', { name: 'Save game' }));
@@ -66,7 +66,7 @@ test('keeps unsaved input visible when persistence fails', async () => {
 test('retries a failed library read', async () => {
   mockInvoke.mockRejectedValueOnce(new Error('Library unavailable'));
   const user = userEvent.setup();
-  render(<Library />);
+  render(<Library initialView="library" />);
   await screen.findByRole('alert');
   await user.click(screen.getByRole('button', { name: 'Retry' }));
   await screen.findByText('Your next chapter starts here');
@@ -75,7 +75,7 @@ test('retries a failed library read', async () => {
 
 test('contains keyboard focus, closes with Escape and returns focus to its opener', async () => {
   const user = userEvent.setup();
-  render(<Library />);
+  render(<Library initialView="library" />);
   const opener = screen.getByRole('button', { name: '+ Add game' });
   await user.click(opener);
   expect(screen.getByLabelText('Title')).toHaveFocus();
@@ -108,7 +108,7 @@ test('does not dismiss a pending save with Escape', async () => {
     } as never;
   });
   const user = userEvent.setup();
-  render(<Library />);
+  render(<Library initialView="library" />);
   await user.click(screen.getByRole('button', { name: '+ Add game' }));
   await user.type(screen.getByLabelText('Title'), 'Pending game');
   await user.click(screen.getByRole('button', { name: 'Save game' }));
@@ -151,7 +151,7 @@ test('opens the persistent archive and restores a game without editing it', asyn
     } as never;
   });
   const user = userEvent.setup();
-  render(<Library />);
+  render(<Library initialView="library" />);
   await screen.findByText('Your next chapter starts here');
   await user.click(screen.getByRole('button', { name: 'Archived games' }));
   await screen.findByText('Saved adventure');

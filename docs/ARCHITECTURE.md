@@ -8,11 +8,11 @@ The current vertical slice separates UI, IPC contracts, desktop command handlers
 
 ## Current data model
 
-- `games`: stable game identity and title.
+- `games`: stable game identity and title, plus optional IGDB identity, cover ID and community-rating snapshot.
 - `library_entries`: personal status, platform label, optional rating, duration in seconds, completion date, platinum goal, notes and archive state.
 - One personal entry per game is enforced in this first schema. Replays and multi-platform copies need a deliberate later migration, not duplicated title-based keys.
 - SQLite foreign keys and constraints complement Rust validation. Updates use transactions. Queries return no more than 100 entries at a time.
-- Schema version 1 is the initial schema. Future schema changes require versioned migrations and pre-migration backups.
+- Schema version 2 adds catalog metadata through a transaction. Existing version-1 libraries receive a SQLite snapshot beside the database before migration. Unsupported newer versions are refused without downgrading.
 
 ## Planned modules
 
@@ -20,7 +20,7 @@ Library, tags, sagas, imports, backup/restore and metadata integrations. A saga 
 
 ## Optional online features
 
-IGDB/Twitch cover lookup is opt-in. Fetch candidates in Rust, confirm the correct edition, cache thumbnails on disk and load only visible images. Never embed a shared confidential client secret in a distributed binary. Personal credentials need OS-protected storage; a public hosted proxy would be an optional separate deployment decision, not a requirement to use the local library.
+IGDB/Twitch cover lookup is opt-in and implemented on this branch. Rust authenticates, fetches candidates and caches selected covers on disk. The renderer loads visible cached images through a narrow read command; no general filesystem permission is exposed. Public search thumbnails use only the IGDB CDN. The owner confirms the correct edition before saving the link. Never embed a shared confidential client secret in a distributed binary. Authentication is session-only; any future persistent credential feature must use OS-protected storage. A public hosted proxy would be a separate deployment decision. See [IGDB boundaries and setup](IGDB.md).
 
 The donation command opens one fixed Buy Me a Coffee URL. The frontend has no unrestricted shell or filesystem permission. External covers must retain their own source attribution and applicable rights.
 
