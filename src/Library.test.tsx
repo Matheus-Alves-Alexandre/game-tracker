@@ -5,6 +5,68 @@ import { invoke } from '@tauri-apps/api/core';
 import Library from './Library';
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 const mockInvoke = vi.mocked(invoke);
+
+test.each([false, true])(
+  'quick status change handles persistence failure=%s',
+  async (fails) => {
+    let status = 'completed';
+    mockInvoke.mockImplementation(async (command, args) => {
+      if (command === 'list_games')
+        return [
+          {
+            id: 'game-1',
+            title: 'Adventure',
+            platform: 'PC',
+            status,
+            rating: 4,
+            playtimeSeconds: 5400,
+            completedOn: status === 'completed' ? '2026-01-10' : null,
+            platinumStatus: 'planned',
+            notes: 'Keep my notes',
+          },
+        ] as never;
+      if (command === 'set_game_status') {
+        if (fails) throw new Error('Could not save status');
+        status = (args as { status: string }).status;
+        return undefined as never;
+      }
+      return {
+        total: 1,
+        completed: status === 'completed' ? 1 : 0,
+        playing: status === 'playing' ? 1 : 0,
+        platinum: 0,
+        averageRating: 4,
+      } as never;
+    });
+    const user = userEvent.setup();
+    render(<Library />);
+    const selector = await screen.findByRole('combobox', {
+      name: 'Status for Adventure',
+    });
+    await user.selectOptions(selector, 'playing');
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('set_game_status', {
+        id: 'game-1',
+        status: 'playing',
+      }),
+    );
+    expect(
+      mockInvoke.mock.calls.some(([command]) => command === 'save_game'),
+    ).toBe(false);
+    if (fails) {
+      await screen.findByRole('alert');
+      expect(
+        screen.getByRole('combobox', { name: 'Status for Adventure' }),
+      ).toHaveValue('completed');
+    } else {
+      await waitFor(() =>
+        expect(
+          screen.getByRole('combobox', { name: 'Status for Adventure' }),
+        ).toHaveValue('playing'),
+      );
+    }
+  },
+);
 beforeEach(() => {
   mockInvoke.mockImplementation(async (command) => {
     if (command === 'list_games') return [] as never;
