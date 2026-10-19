@@ -25,6 +25,8 @@ Controlled loopback HTTP tests verify OAuth form requests, absence of the secret
 
 No test claims successful live Twitch authentication without owner-provided credentials. No test or home screenshot uses the owner's production library. Workload RAM/CPU and installed-update acceptance remain separate milestones.
 
+Settings renderer tests establish navigation back to the library/home/archive, centralized credential fields, the Steam placeholder without unused key inputs, and clearing an unsubmitted secret on navigation. The native test captures Settings in the isolated profile before exercising the library flow. This change does not add Steam synchronization or persistent secret storage.
+
 ## Desktop isolation and diagnostics
 
 The test configuration changes the application identifier. The test creates a unique title and archives it before cleanup. Do not delete production application data. Screenshots and driver logs are written into ignored `reports/`. CI uploads diagnostics even when tests fail, with 14-day retention. GitHub repository log retention is configured separately to 14 days.

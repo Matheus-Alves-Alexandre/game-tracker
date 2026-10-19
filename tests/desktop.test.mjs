@@ -116,14 +116,19 @@ test(
       assert.ok(ready, 'Native WebDriver must start');
       driver = await connect();
       console.info('Native session created; entering a game.');
-      await clickText('IGDB connection');
+      await clickText('Settings');
       assert.equal(
         await driver
           .findElement(By.css('input[type="password"]'))
           .getAttribute('value'),
         '',
       );
-      await clickText('Close');
+      await fs.writeFile(
+        path.join(reportPath, 'desktop-settings.png'),
+        await driver.takeScreenshot(),
+        'base64',
+      );
+      await clickText('Library');
       await clickText('+ Add game');
       assert.equal(
         await driver.switchTo().activeElement().getAttribute('name'),

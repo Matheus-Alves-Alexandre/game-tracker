@@ -3,11 +3,7 @@ import { Search, PlugZap } from 'lucide-react';
 import { catalogApi } from './library-api';
 import type { Candidate } from './library-api';
 
-export function CatalogConnection({
-  onConnected,
-}: {
-  onConnected?: () => void;
-}) {
+export function CatalogConnection() {
   const [client, setClient] = useState('');
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,7 +24,6 @@ export function CatalogConnection({
       await pending;
       setClient('');
       setConnected(true);
-      onConnected?.();
     } catch (reason) {
       setError(String(reason));
     } finally {
@@ -37,19 +32,22 @@ export function CatalogConnection({
   }
   return (
     <section className="catalog-connection" aria-label="IGDB connection">
-      <p>
-        Create a Confidential application in the Twitch developer console,
-        enable two-factor authentication and use http://localhost as its
-        redirect URL. Paste its Client ID and Client Secret below.
-      </p>
-      <button
-        type="button"
-        onClick={() => {
-          void catalogApi.setup().catch((reason) => setError(String(reason)));
-        }}
-      >
-        Open Twitch developer console ↗
-      </button>
+      <details className="credential-guide">
+        <summary>How to get Twitch credentials</summary>
+        <p>
+          Create a Confidential application in the Twitch developer console,
+          enable two-factor authentication and use http://localhost as its
+          redirect URL. Paste its Client ID and Client Secret below.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            void catalogApi.setup().catch((reason) => setError(String(reason)));
+          }}
+        >
+          Open Twitch developer console ↗
+        </button>
+      </details>
       <p>
         Connect your own Twitch developer application to search IGDB.
         Credentials are used only for this session. The secret is not saved;
@@ -60,9 +58,18 @@ export function CatalogConnection({
           <p role="status">Connected to IGDB for this session.</p>
           <button
             type="button"
+            disabled={busy}
             onClick={async () => {
-              await catalogApi.disconnect();
-              setConnected(false);
+              setBusy(true);
+              setError('');
+              try {
+                await catalogApi.disconnect();
+                setConnected(false);
+              } catch (reason) {
+                setError(String(reason));
+              } finally {
+                setBusy(false);
+              }
             }}
           >
             Disconnect IGDB
@@ -180,7 +187,10 @@ export default function CatalogLookup({
     <details className="catalog-lookup">
       <summary>Find a game & cover on IGDB</summary>
       {!connected ? (
-        <CatalogConnection onConnected={() => setConnected(true)} />
+        <p>
+          Connect Twitch / IGDB in Settings → Integrations before searching. You
+          can save this game manually, then return to Settings to connect.
+        </p>
       ) : (
         <>
           <p>
@@ -251,7 +261,8 @@ export default function CatalogLookup({
       )}
       {error && (
         <p role="alert" className="error">
-          {error} You can reconnect in IGDB connection or keep editing offline.
+          {error} You can reconnect in Settings → Integrations or keep editing
+          offline.
         </p>
       )}
     </details>

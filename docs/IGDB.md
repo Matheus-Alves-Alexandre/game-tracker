@@ -7,7 +7,7 @@ IGDB is optional. The local SQLite library, manual editing and all personal stat
 1. Use your own Twitch account with two-factor authentication enabled.
 2. Register a **Confidential** application in the [Twitch developer console](https://dev.twitch.tv/console/apps). IGDB does not use the redirect URL; use `http://localhost` in the registration form.
 3. Generate the application's Client Secret.
-4. In Game Tracker, open **IGDB connection** and enter the Client ID and Client Secret directly in the app. Never paste a secret into chat, a public issue, Git, screenshots or a browser build setting.
+4. In Game Tracker, use the bottom sidebar gear to open **Settings → Integrations → Twitch / IGDB**, and enter the Client ID and Client Secret directly in the app. Never paste a secret into chat, a public issue, Git, screenshots or a browser build setting.
 5. Connect. The secret is sent to Twitch over HTTPS in a form body, not a URL. Rust retains only the application ID and access token in memory for this session. Closing the app or pressing Disconnect removes that session. Reconnect when it expires.
 
 There is deliberately no shared developer secret in the binary and no plaintext credential file. Persistent credential storage is not implemented. GitHub Pages never receives credentials. The UI clears the password field when submitting the connection request; the backend does not return tokens to the renderer or include remote response bodies in errors.
@@ -15,6 +15,8 @@ There is deliberately no shared developer secret in the binary and no plaintext 
 ## Choose an edition
 
 Open a game's edit popup and expand **Find a game & cover on IGDB**. Search, inspect the title, platforms and release year, then choose the correct edition. Results are limited to eight. There is no background library upload or automatic title matching.
+
+Credentials are configured only in Settings, not in the game editor. When disconnected, the editor explains where to connect and keeps manual editing available. Steam has a clearly marked Coming soon card in Settings; no Steam key is collected until synchronization is implemented.
 
 Choosing a result downloads its JPEG cover to the app's local `covers` directory. Save the editor to persist the IGDB link. Existing personal titles, platforms, statuses, notes, hours and ratings are preserved. New records can use the selected catalog title. Remove link in the editor to unlink metadata. Cancel does not save the association, although an already downloaded public cover may remain cached.
 

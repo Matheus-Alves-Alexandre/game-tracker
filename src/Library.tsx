@@ -12,8 +12,15 @@ import './library.css';
 import Modal from './Modal';
 import Home from './Home';
 import Cover from './Cover';
-import CatalogLookup, { CatalogConnection } from './CatalogLookup';
-import { House, LibraryBig, Archive, PlugZap, Info } from 'lucide-react';
+import CatalogLookup from './CatalogLookup';
+import Settings from './Settings';
+import {
+  House,
+  LibraryBig,
+  Archive,
+  Settings as SettingsIcon,
+  Info,
+} from 'lucide-react';
 
 const emptyGame: GameInput = {
   id: null,
@@ -46,7 +53,7 @@ export default function Library({
   const [error, setError] = useState('');
   const [editor, setEditor] = useState<GameInput | null>(null);
   const [about, setAbout] = useState(false);
-  const [connection, setConnection] = useState(false);
+  const [settingsView, setSettingsView] = useState(false);
   const [homeView, setHomeView] = useState(initialView === 'home');
   const [archived, setArchived] = useState<Game | null>(null);
   const [archiveView, setArchiveView] = useState(false);
@@ -128,7 +135,7 @@ export default function Library({
 
   return (
     <div className="app-shell">
-      <aside className="sidebar" inert={editor !== null || about || connection}>
+      <aside className="sidebar" inert={editor !== null || about}>
         <div className="brand-mark" aria-hidden="true">
           GT
         </div>
@@ -136,17 +143,25 @@ export default function Library({
         <p className="muted">Your games. Your journey.</p>
         <nav aria-label="Main navigation">
           <button
-            className={homeView ? 'nav-active' : ''}
-            aria-current={homeView ? 'page' : undefined}
-            onClick={() => setHomeView(true)}
+            className={homeView && !settingsView ? 'nav-active' : ''}
+            aria-current={homeView && !settingsView ? 'page' : undefined}
+            onClick={() => {
+              setSettingsView(false);
+              setHomeView(true);
+            }}
           >
             <House size={18} />
             Home
           </button>
           <button
-            className={!archiveView && !homeView ? 'nav-active' : ''}
-            aria-current={!archiveView && !homeView ? 'page' : undefined}
+            className={
+              !archiveView && !homeView && !settingsView ? 'nav-active' : ''
+            }
+            aria-current={
+              !archiveView && !homeView && !settingsView ? 'page' : undefined
+            }
             onClick={() => {
+              setSettingsView(false);
               setHomeView(false);
               if (!archiveView) return;
               setArchiveView(false);
@@ -158,9 +173,14 @@ export default function Library({
             Library
           </button>
           <button
-            className={archiveView && !homeView ? 'nav-active' : ''}
-            aria-current={archiveView && !homeView ? 'page' : undefined}
+            className={
+              archiveView && !homeView && !settingsView ? 'nav-active' : ''
+            }
+            aria-current={
+              archiveView && !homeView && !settingsView ? 'page' : undefined
+            }
             onClick={() => {
+              setSettingsView(false);
               setHomeView(false);
               if (archiveView) return;
               setArchiveView(true);
@@ -171,14 +191,15 @@ export default function Library({
             <Archive size={18} />
             Archived games
           </button>
+        </nav>
+        <div className="sidebar-footer">
           <button
-            onClick={(event) => {
-              opener.current = event.currentTarget;
-              setConnection(true);
-            }}
+            className={settingsView ? 'nav-active' : ''}
+            aria-current={settingsView ? 'page' : undefined}
+            onClick={() => setSettingsView(true)}
           >
-            <PlugZap size={18} />
-            IGDB connection
+            <SettingsIcon size={19} />
+            Settings
           </button>
           <button
             onClick={(event) => {
@@ -189,38 +210,46 @@ export default function Library({
             <Info size={18} />
             About & support
           </button>
-        </nav>
-        <div className="local-note">
-          <span className="status-dot" /> Local library
-          <br />
-          <small>Stored on this computer</small>
+          <div className="local-note">
+            <span className="status-dot" /> Local library
+            <br />
+            <small>Stored on this computer</small>
+          </div>
         </div>
       </aside>
-      <main inert={editor !== null || about || connection}>
+      <main inert={editor !== null || about}>
         <header>
           <div>
-            <p className="eyebrow">YOUR COLLECTION</p>
+            <p className="eyebrow">
+              {settingsView ? 'YOUR PREFERENCES' : 'YOUR COLLECTION'}
+            </p>
             <h2>
-              {homeView
-                ? 'Welcome back, player.'
-                : 'Make room for your next adventure.'}
+              {settingsView
+                ? 'Settings'
+                : homeView
+                  ? 'Welcome back, player.'
+                  : 'Make room for your next adventure.'}
             </h2>
             <p className="muted">
-              Keep track of what you play, finish, and come back to.
+              {settingsView
+                ? 'Manage optional game services and credentials.'
+                : 'Keep track of what you play, finish, and come back to.'}
             </p>
           </div>
-          <button
-            className="primary"
-            onClick={(event) => {
-              opener.current = event.currentTarget;
-              setError('');
-              setEditor({ ...emptyGame });
-            }}
-          >
-            + Add game
-          </button>
+          {!settingsView && (
+            <button
+              className="primary"
+              onClick={(event) => {
+                opener.current = event.currentTarget;
+                setError('');
+                setEditor({ ...emptyGame });
+              }}
+            >
+              + Add game
+            </button>
+          )}
         </header>
-        {!homeView && (
+        {!homeView && !settingsView && (
           <section className="stats" aria-label="Library overview">
             {[
               ['Games', dashboard?.total],
@@ -235,7 +264,7 @@ export default function Library({
             ))}
           </section>
         )}
-        {error && !editor && !about && !connection && (
+        {error && !editor && !about && !settingsView && (
           <div className="error" role="alert">
             {error}{' '}
             {!editor && (
@@ -243,7 +272,7 @@ export default function Library({
             )}
           </div>
         )}
-        {archived && (
+        {archived && !settingsView && (
           <div className="notice" role="status">
             Archived {archived.title}.{' '}
             <button
@@ -254,7 +283,9 @@ export default function Library({
             </button>
           </div>
         )}
-        {homeView ? (
+        {settingsView ? (
+          <Settings />
+        ) : homeView ? (
           <Home
             revision={revision}
             dashboard={dashboard}
@@ -606,19 +637,6 @@ export default function Library({
               </button>
             </div>
           </form>
-        </Modal>
-      )}
-      {connection && (
-        <Modal
-          returnFocusTo={opener.current}
-          labelId="connection-title"
-          onClose={() => setConnection(false)}
-        >
-          <h2 id="connection-title">IGDB connection</h2>
-          <CatalogConnection />
-          <div className="dialog-actions">
-            <button onClick={() => setConnection(false)}>Close</button>
-          </div>
         </Modal>
       )}
       {about && (

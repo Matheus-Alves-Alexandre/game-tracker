@@ -6,6 +6,10 @@ The featured game prioritizes Playing, then Planned. Top-rated games use the own
 
 Platinum percentage is achieved games divided by active games whose platinum field is not Not applicable. With no eligible games, show an unavailable marker rather than a fabricated zero. The UI states the numerator and denominator. Total playtime is the sum of recorded lifetime durations, with coverage shown separately; it is not monthly activity. Archived games are excluded. Personal scores and IGDB community ratings remain distinct.
 
+## Settings
+
+Settings is a dedicated page reached from the bottom sidebar gear. Its Integrations section centralizes the Twitch/IGDB session connection and a clearly labeled Steam roadmap card. Credential fields do not appear in the game editor. The sidebar stays within the viewport while long pages scroll, keeping Settings accessible. Leaving Settings discards unsubmitted credential fields; the established backend session remains alive until disconnect, expiry or app shutdown.
+
 ## UI resources reviewed
 
 - [Lucide React](https://lucide.dev/guide/react/): adopted for individual SVG icons. Named imports let the bundler retain only used icons; ISC license.
