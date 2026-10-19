@@ -217,6 +217,90 @@ test(
       );
       await clickText('Undo archive');
       await findGame(title);
+      await clickText('Game lists');
+      const listName = `Saga ${randomUUID()}`;
+      const listInput = (label) =>
+        driver.findElement(By.xpath(`//label[contains(.,'${label}')]/input`));
+      await typeText(await listInput('New list name'), listName);
+      await clickText('Create list');
+      await driver.wait(
+        until.elementLocated(
+          By.xpath(`//h3[normalize-space(.)='${listName}']`),
+        ),
+        10000,
+      );
+      await driver.findElement(By.css('.game-lists summary')).click();
+      await typeText(await listInput('Game title'), title);
+      await typeText(await listInput('Game platform'), 'PC');
+      await clickText('Add game to list');
+      const completedBox = () =>
+        driver.findElement(By.css(`input[aria-label="Completed ${title}"]`));
+      const waitForCompletion = async (expected) =>
+        driver.wait(async () => {
+          try {
+            const region = await driver.findElement(By.css('.game-lists'));
+            return (
+              (await region.getAttribute('aria-busy')) === 'false' &&
+              (await (await completedBox()).isSelected()) === expected
+            );
+          } catch (error) {
+            if (
+              ['NoSuchElementError', 'StaleElementReferenceError'].includes(
+                error.name,
+              )
+            )
+              return false;
+            throw error;
+          }
+        }, 10000);
+      await waitForCompletion(true);
+      console.info('List member linked; checking shared completion.');
+      await (await completedBox()).click();
+      await waitForCompletion(false);
+      await driver.wait(
+        until.elementLocated(By.xpath("//strong[.='0% completed']")),
+        10000,
+      );
+      await (await completedBox()).click();
+      await waitForCompletion(true);
+      console.info('Completion toggled; reloading list persistence.');
+      await driver.navigate().refresh();
+      await clickText('Game lists');
+      await (
+        await driver.wait(
+          until.elementLocated(
+            By.xpath(
+              `//nav[@aria-label='Your lists']//button[strong='${listName}']`,
+            ),
+          ),
+          10000,
+        )
+      ).click();
+      await driver.wait(
+        until.elementLocated(By.xpath("//strong[.='100% completed']")),
+        10000,
+      );
+      await fs.writeFile(
+        path.join(reportPath, 'desktop-lists.png'),
+        await driver.takeScreenshot(),
+        'base64',
+      );
+      await clickText('Delete list');
+      await clickText('Confirm delete list');
+      await driver.wait(
+        until.elementLocated(By.xpath("//p[contains(.,'Choose a list')]")),
+        10000,
+      );
+      await (await findGame(title)).click();
+      assert.equal(
+        await driver.findElement(By.name('status')).getAttribute('value'),
+        'completed',
+      );
+      assert.equal(
+        await driver.findElement(By.name('notes')).getAttribute('value'),
+        'Persistence verified after reloading the interface.',
+      );
+      await clickText('Cancel');
       await clickText('Home');
       await driver.wait(until.elementLocated(By.css('.rated-card')), 10000);
       await fs.writeFile(
@@ -240,8 +324,10 @@ test(
               {
                 expectedTitle: title,
                 search: await driver
-                  .findElement(By.css('input[type="search"]'))
-                  .getAttribute('value'),
+                  .findElements(By.css('input[type="search"]'))
+                  .then(async (items) =>
+                    items.length ? items[0].getAttribute('value') : null,
+                  ),
                 visibleText: await driver.findElement(By.css('body')).getText(),
               },
               null,

@@ -53,7 +53,7 @@ IGDB metadata and artwork retain their own applicable rights; the application's 
 
 Rust uses fixed Twitch, IGDB and image-CDN endpoints, standard TLS validation, a 12-second request timeout, no redirects and bounded responses. Search inputs are escaped as literals. Requests are serialized with at least 350 ms between search starts. Authentication failures invalidate the session; rate limits ask the user to wait rather than polling. Search returns at most eight candidates. JSON responses are capped at 256 KiB; cover downloads at 2 MiB. Only validated image IDs can address the cache; arbitrary file paths and arbitrary remote image URLs are not accepted.
 
-Schema 2 adds optional catalog fields. An existing schema-1 library is backed up next to its database before the transactional migration. Do not open the upgraded database with an older app that only supports schema 1. The application refuses newer schemas instead of downgrading them.
+Schema 2 introduced optional catalog fields; schema 3 adds game lists. Existing schema-1/2 libraries are backed up next to the database before migration. Do not open the upgraded database with an older app that does not support schema 3. The application refuses newer schemas instead of downgrading them.
 
 ## Verification limits
 

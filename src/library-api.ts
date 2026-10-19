@@ -28,6 +28,26 @@ export interface GameInput {
 export interface Game extends GameInput {
   id: string;
 }
+export interface GameList {
+  id: string;
+  name: string;
+  total: number;
+  completed: number;
+}
+export const listsApi = {
+  all: () => invoke<GameList[]>('get_game_lists'),
+  save: (id: string | null, name: string) =>
+    invoke<string>('save_game_list', { id, name }),
+  delete: (id: string) => invoke<void>('delete_game_list', { id }),
+  members: (id: string, offset: number) =>
+    invoke<Game[]>('get_list_members', { id, offset }),
+  add: (listId: string, entryId: string | null, title = '', platform = '') =>
+    invoke<void>('add_list_game', { listId, entryId, title, platform }),
+  remove: (listId: string, entryId: string) =>
+    invoke<void>('remove_list_game', { listId, entryId }),
+  complete: (listId: string, entryId: string, completed: boolean) =>
+    invoke<void>('complete_list_game', { listId, entryId, completed }),
+};
 export interface Dashboard {
   total: number;
   completed: number;

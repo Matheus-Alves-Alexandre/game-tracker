@@ -27,6 +27,10 @@ No test claims successful live Twitch authentication without owner-provided cred
 
 Settings renderer tests establish navigation back to the library/home/archive, centralized credential fields, the Steam placeholder without unused key inputs, and clearing an unsubmitted secret on navigation. The native test captures Settings in the isolated profile before exercising the library flow. This change does not add Steam synchronization or persistent secret storage.
 
+## Game lists evidence
+
+Temporary SQLite tests verify shared completion across two lists and the library, persistence after close/reopen, duplicate title/platform reuse, archived-game restoration, non-destructive membership/list removal, rejected membership rollback and schema-2 migration with a safety backup. Renderer tests cover list creation, adding by name, percentage/remaining display, checkbox IPC arguments and failed-save feedback without optimistic completion. The native Windows flow creates a list, links an existing game, toggles completion, reloads the renderer, verifies persisted progress, deletes the list and checks that the original game and notes remain in the library. These checks do not establish automatic franchise discovery or workload RAM targets.
+
 ## Desktop isolation and diagnostics
 
 The test configuration changes the application identifier. The test creates a unique title and archives it before cleanup. Do not delete production application data. Screenshots and driver logs are written into ignored `reports/`. CI uploads diagnostics even when tests fail, with 14-day retention. GitHub repository log retention is configured separately to 14 days.

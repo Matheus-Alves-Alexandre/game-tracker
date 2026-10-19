@@ -18,7 +18,7 @@ Early development. This branch supports creating and editing games, status and t
 
 This branch also includes a personal home dashboard and optional IGDB game/cover lookup with disk caching. Your Twitch application credentials are entered locally and used for one session; no shared secret is distributed. See [IGDB setup](docs/IGDB.md) and the [UI design notes](docs/UI.md).
 
-General spreadsheet import, sagas, user-facing backup/restore, achievements synchronization and multilingual support remain planned. The database creates a safety backup when upgrading from schema 1 to schema 2; that is not a complete backup-management feature. Memory targets are engineering goals, not published benchmark results.
+Game lists support saga checklists with completion percentages and shared library status. General spreadsheet import, user-facing backup/restore, achievements synchronization and multilingual support remain planned. The database creates a safety backup before upgrading existing schema 1 or 2 libraries to schema 3; that is not a complete backup-management feature. Memory targets are engineering goals, not published benchmark results.
 
 Signed in-app updates are [planned before stable installer distribution](docs/UPDATES.md); the current app does not update itself. See the [sprint plan](docs/SPRINTS.md) for reviewable increments.
 
@@ -26,6 +26,8 @@ Signed in-app updates are [planned before stable installer distribution](docs/UP
 
 - Local SQLite persistence, with no server to start.
 - Planned, Playing, Paused, Completed and Dropped statuses.
+- Named game lists and saga checklists, with completed/remaining counts and percentages.
+- Shared game status across lists and library; removing a list keeps its games.
 - Optional 1–5 ratings; unrated is different from zero.
 - Explicit minute input, displayed as hours and minutes.
 - Completion dates, platinum goals and personal notes.

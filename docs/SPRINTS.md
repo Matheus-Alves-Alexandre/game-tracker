@@ -20,4 +20,4 @@ Complete before the first public installer intended for ongoing use. See [update
 
 ## Later increments
 
-Tags/platform normalization, sagas, annual statistics, exports and workload benchmarks. Optional IGDB metadata follows the offline core; credentials are not needed for the current sprints.
+Named saga checklists with shared library completion are implemented on the game-lists branch. Later increments: tags/platform normalization, manual saga ordering, annual statistics, exports and workload benchmarks. Optional IGDB metadata is available; credentials are not needed for offline lists.
