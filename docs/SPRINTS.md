@@ -1,6 +1,6 @@
 # Development sprints
 
-Use feature branches and commit verified slices. The maintainer will open pull requests; do not automatically create or merge them. A commit is a checkpoint, not a public release. Keep all required checks and main protection.
+Use feature branches and commit verified slices. Open pull requests when a reviewable increment is ready so hosted checks can run while the maintainer reviews. Approval and merging belong to the maintainer; do not merge automatically or enable auto-merge. A commit is a checkpoint, not a public release. Keep all required checks and main protection.
 
 ## Sprint 1: recovery and keyboard access
 
