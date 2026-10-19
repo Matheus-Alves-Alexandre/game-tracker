@@ -14,7 +14,9 @@ Track what you play, finish and return to. Keep your personal library on your ow
 
 Early development. This branch supports creating and editing games, status and title/platform filters, optional ratings, playtime, completion dates, platinum goals, persistent archive recovery, keyboard-accessible dialogs and a persistent SQLite library. It is not the complete MVP yet.
 
-Spreadsheet import, sagas, backups, cover lookup, achievements synchronization and multilingual support are planned. No Steam or IGDB credentials are currently requested by the app. Memory targets are engineering goals, not published benchmark results.
+This branch also includes a personal home dashboard and optional IGDB game/cover lookup with disk caching. Your Twitch application credentials are entered locally and used for one session; no shared secret is distributed. See [IGDB setup](docs/IGDB.md) and the [UI design notes](docs/UI.md).
+
+General spreadsheet import, sagas, user-facing backup/restore, achievements synchronization and multilingual support remain planned. The database creates a safety backup when upgrading from schema 1 to schema 2; that is not a complete backup-management feature. Memory targets are engineering goals, not published benchmark results.
 
 Signed in-app updates are [planned before stable installer distribution](docs/UPDATES.md); the current app does not update itself. See the [sprint plan](docs/SPRINTS.md) for reviewable increments.
 
@@ -26,6 +28,8 @@ Signed in-app updates are [planned before stable installer distribution](docs/UP
 - Explicit minute input, displayed as hours and minutes.
 - Completion dates, platinum goals and personal notes.
 - Bounded library queries with 100 entries per page.
+- Featured game, personal top-rated games, recorded finish dates and explicit platinum/playtime coverage.
+- Optional IGDB edition selection with separate community ratings and offline cached covers.
 - Optional support link, with no paid feature gates.
 
 ## Architecture

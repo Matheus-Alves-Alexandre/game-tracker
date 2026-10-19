@@ -77,8 +77,9 @@ test(
         15_000,
         'The game editor should close only after persistence succeeds',
       );
-    const findGame = async (value) => {
+    const findGame = async (value, archived = false) => {
       await waitForSave();
+      await clickText(archived ? 'Archived games' : 'Library');
       const search = await driver.findElement(By.css('input[type="search"]'));
       // Native clear() can omit input events and leave React state unchanged.
       await search.sendKeys(Key.chord(Key.CONTROL, 'a'), Key.BACK_SPACE);
@@ -115,6 +116,14 @@ test(
       assert.ok(ready, 'Native WebDriver must start');
       driver = await connect();
       console.info('Native session created; entering a game.');
+      await clickText('IGDB connection');
+      assert.equal(
+        await driver
+          .findElement(By.css('input[type="password"]'))
+          .getAttribute('value'),
+        '',
+      );
+      await clickText('Close');
       await clickText('+ Add game');
       assert.equal(
         await driver.switchTo().activeElement().getAttribute('name'),
@@ -183,7 +192,7 @@ test(
       await (await archiveButton()).click();
       await driver.navigate().refresh();
       await clickText('Archived games');
-      await findGame(title);
+      await findGame(title, true);
       await driver
         .findElement(By.css(`button[aria-label="Restore ${title}"]`))
         .click();
@@ -202,6 +211,14 @@ test(
         10_000,
       );
       await clickText('Undo archive');
+      await findGame(title);
+      await clickText('Home');
+      await driver.wait(until.elementLocated(By.css('.rated-card')), 10000);
+      await fs.writeFile(
+        path.join(reportPath, 'desktop-home.png'),
+        await driver.takeScreenshot(),
+        'base64',
+      );
       await findGame(title);
       await (await archiveButton()).click();
       await fs.writeFile(
