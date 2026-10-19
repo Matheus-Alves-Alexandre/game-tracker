@@ -11,12 +11,13 @@ fn list_games(
     search: String,
     status: String,
     offset: u32,
+    archived: bool,
 ) -> Result<Vec<Game>, String> {
     state
         .0
         .lock()
         .map_err(|_| "Restart the app to reconnect to your library.".to_string())?
-        .list(&search, &status, offset)
+        .list(&search, &status, offset, archived)
 }
 #[tauri::command]
 fn save_game(state: tauri::State<AppState>, input: GameInput) -> Result<Game, String> {

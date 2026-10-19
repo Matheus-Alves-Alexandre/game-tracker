@@ -13,6 +13,12 @@
 
 Each claim has one primary evidence path. Renderer tests do not prove SQLite persistence; Rust tests do not prove webview IPC; neither proves installer behavior.
 
+## Sprint 1: archive recovery and modal keyboard access
+
+Rust owns the close/reopen evidence: an archived record remains searchable after the SQLite connection is reopened, stays out of active metrics, and restores with its original fields. Renderer tests own modal focus wrapping, Escape, opener focus restoration, pending-save protection and the archive-view restore command. The native Windows test verifies these boundaries together, including background inertness, keyboard focus return and restoring an archived record after renderer reload. These paths passed locally on the sprint branch: six renderer tests, six Rust tests and one native test. TypeScript, formatting, Clippy and the desktop debug build passed as well. Hosted CI remains an independent required check before merge.
+
+This does not establish screen-reader compatibility across assistive technologies, an installed updater or backup/restore. Those need their own acceptance evidence.
+
 ## Desktop isolation and diagnostics
 
 The test configuration changes the application identifier. The test creates a unique title and archives it before cleanup. Do not delete production application data. Screenshots and driver logs are written into ignored `reports/`. CI uploads diagnostics even when tests fail, with 14-day retention. GitHub repository log retention is configured separately to 14 days.
