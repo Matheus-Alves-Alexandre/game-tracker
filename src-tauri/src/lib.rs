@@ -1,9 +1,59 @@
+mod catalog;
 mod store;
 use std::sync::Mutex;
-use store::{Dashboard, Game, GameInput, Store};
+use store::{Dashboard, Game, GameInput, Home, Store};
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 struct AppState(Mutex<Store>);
+struct CoverDirectory(std::path::PathBuf);
+
+#[tauri::command]
+async fn connect_igdb(
+    state: tauri::State<'_, catalog::Catalog>,
+    client_id: String,
+    client_secret: String,
+) -> Result<(), String> {
+    state.connect(client_id, client_secret).await
+}
+#[tauri::command]
+async fn igdb_connected(state: tauri::State<'_, catalog::Catalog>) -> Result<bool, String> {
+    Ok(state.connected().await)
+}
+#[tauri::command]
+async fn disconnect_igdb(state: tauri::State<'_, catalog::Catalog>) -> Result<(), String> {
+    state.disconnect().await;
+    Ok(())
+}
+#[tauri::command]
+async fn search_igdb(
+    state: tauri::State<'_, catalog::Catalog>,
+    title: String,
+) -> Result<Vec<catalog::Candidate>, String> {
+    state.search(&title).await
+}
+#[tauri::command]
+async fn cache_igdb_cover(
+    state: tauri::State<'_, catalog::Catalog>,
+    directory: tauri::State<'_, CoverDirectory>,
+    image_id: String,
+) -> Result<(), String> {
+    state.cache_cover(&directory.0, &image_id).await
+}
+#[tauri::command]
+async fn read_cached_cover(
+    directory: tauri::State<'_, CoverDirectory>,
+    image_id: String,
+) -> Result<Option<String>, String> {
+    catalog::read_cover(&directory.0, &image_id).await
+}
+#[tauri::command]
+fn get_home(state: tauri::State<AppState>) -> Result<Home, String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app to reconnect to your library.".to_string())?
+        .home()
+}
 
 #[tauri::command]
 fn list_games(
@@ -49,6 +99,12 @@ fn open_support(app: tauri::AppHandle) -> Result<(), String> {
         .open_url("https://buymeacoffee.com/xxlozerxd", None::<&str>)
         .map_err(|error| error.to_string())
 }
+#[tauri::command]
+fn open_igdb_setup(app: tauri::AppHandle) -> Result<(), String> {
+    app.opener()
+        .open_url("https://dev.twitch.tv/console/apps", None::<&str>)
+        .map_err(|_| "Could not open the browser. Visit dev.twitch.tv/console/apps.".into())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -57,6 +113,8 @@ pub fn run() {
         .setup(|app| {
             let directory = app.path().app_data_dir()?;
             std::fs::create_dir_all(&directory)?;
+            app.manage(CoverDirectory(directory.join("covers")));
+            app.manage(catalog::Catalog::new());
             app.manage(AppState(Mutex::new(Store::open(
                 &directory.join("library.sqlite3"),
             )?)));
@@ -67,7 +125,15 @@ pub fn run() {
             save_game,
             set_archived,
             get_dashboard,
-            open_support
+            open_support,
+            open_igdb_setup,
+            get_home,
+            connect_igdb,
+            igdb_connected,
+            disconnect_igdb,
+            search_igdb,
+            cache_igdb_cover,
+            read_cached_cover
         ])
         .run(tauri::generate_context!())
         .expect("failed to start Game Tracker");
