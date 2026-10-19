@@ -32,8 +32,8 @@ export interface Dashboard {
   averageRating: number | null;
 }
 export const libraryApi = {
-  list: (search: string, status: string, offset: number) =>
-    invoke<Game[]>('list_games', { search, status, offset }),
+  list: (search: string, status: string, offset: number, archived: boolean) =>
+    invoke<Game[]>('list_games', { search, status, offset, archived }),
   dashboard: () => invoke<Dashboard>('get_dashboard'),
   save: (input: GameInput) => invoke<Game>('save_game', { input }),
   archive: (id: string, archived: boolean) =>

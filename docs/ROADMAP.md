@@ -6,7 +6,7 @@ Desktop window, persistent game records, edit, search, status filtering, ratings
 
 ## MVP backlog
 
-1. Finish keyboard/modal accessibility and persistent archive recovery.
+1. Keyboard/modal accessibility and persistent archive recovery (implemented in sprint 1; awaiting maintainer review).
 2. Backup, validation and restore before real-data migration.
 3. Spreadsheet preview and import with field mapping, original-value provenance and idempotency.
 4. Tags and console/execution-method separation.
@@ -18,6 +18,8 @@ Desktop window, persistent game records, edit, search, status filtering, ratings
 Optional next increment: local cover selection, IGDB lookup and a grid view with disk caching and bounded image loading. Keep core features offline. Later: achievements synchronization, replay sessions, annual goals, custom lists, portable packaging and additional operating systems.
 
 ## Product rules
+
+Before the first stable public installer, complete the [signed in-app updater milestone](UPDATES.md). Follow the incremental [sprint plan](SPRINTS.md).
 
 - Ratings are optional, 1–5. Legacy spreadsheet zero means unrated.
 - Completion date means when a game was finished. Do not invent dates for historical records.

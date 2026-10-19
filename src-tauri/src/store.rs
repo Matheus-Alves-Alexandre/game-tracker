@@ -67,7 +67,13 @@ impl Store {
             PRAGMA user_version = 1;")?;
         Ok(Self(connection))
     }
-    pub fn list(&self, search: &str, status: &str, offset: u32) -> Result<Vec<Game>, String> {
+    pub fn list(
+        &self,
+        search: &str,
+        status: &str,
+        offset: u32,
+        archived: bool,
+    ) -> Result<Vec<Game>, String> {
         if !status.is_empty() && !STATUSES.contains(&status) {
             return Err("Invalid status filter.".into());
         }
@@ -75,11 +81,11 @@ impl Store {
         let mut statement = self.0.prepare("SELECT e.id, g.title, e.platform, e.status, e.rating,
             e.playtime_seconds, e.completed_on, e.platinum_status, e.notes
             FROM library_entries e JOIN games g ON g.id = e.game_id
-            WHERE e.archived = 0 AND (g.title LIKE ?1 OR e.platform LIKE ?1)
+            WHERE e.archived = ?4 AND (g.title LIKE ?1 OR e.platform LIKE ?1)
             AND (?2 = '' OR e.status = ?2) ORDER BY g.title COLLATE NOCASE, e.id LIMIT 100 OFFSET ?3")
             .map_err(|error| error.to_string())?;
         let rows = statement
-            .query_map(params![query, status, offset], read_game)
+            .query_map(params![query, status, offset, archived], read_game)
             .map_err(|error| error.to_string())?;
         rows.collect::<Result<Vec<_>, _>>()
             .map_err(|error| error.to_string())
@@ -234,7 +240,7 @@ mod tests {
             store.save(changed).unwrap();
         }
         let store = Store::open(&path).unwrap();
-        let games = store.list("updated", "playing", 0).unwrap();
+        let games = store.list("updated", "playing", 0, false).unwrap();
         assert_eq!(games.len(), 1);
         assert_eq!(games[0].id, id);
         assert_eq!(games[0].playtime_seconds, Some(0));
@@ -269,7 +275,7 @@ mod tests {
         second.rating = Some(5);
         second.platinum_status = "achieved".into();
         store.save(second).unwrap();
-        assert_eq!(store.list("", "completed", 0).unwrap().len(), 1);
+        assert_eq!(store.list("", "completed", 0, false).unwrap().len(), 1);
         assert_eq!(store.dashboard().unwrap().average_rating, Some(5.0));
         store.set_archived(&first.id, true).unwrap();
         assert_eq!(store.dashboard().unwrap().total, 1);
@@ -283,8 +289,8 @@ mod tests {
         for number in 0..105 {
             store.save(input(&format!("Game {number:03}"))).unwrap();
         }
-        assert_eq!(store.list("", "", 0).unwrap().len(), 100);
-        assert_eq!(store.list("", "", 100).unwrap().len(), 5);
+        assert_eq!(store.list("", "", 0, false).unwrap().len(), 100);
+        assert_eq!(store.list("", "", 100, false).unwrap().len(), 5);
     }
 
     #[test]
@@ -300,5 +306,32 @@ mod tests {
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
         assert_eq!(version, 99);
+    }
+
+    #[test]
+    fn archive_is_searchable_after_reopening_and_restore_preserves_fields() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("library.sqlite3");
+        let mut store = Store::open(&path).unwrap();
+        let mut original = input("Archived adventure");
+        original.notes = "Keep this history".into();
+        original.rating = Some(4);
+        let game = store.save(original).unwrap();
+        store.set_archived(&game.id, true).unwrap();
+        drop(store);
+        let store = Store::open(&path).unwrap();
+        assert!(store.list("", "", 0, false).unwrap().is_empty());
+        assert_eq!(store.dashboard().unwrap().total, 0);
+        assert!(store.list("missing", "", 0, true).unwrap().is_empty());
+        assert!(store.list("", "completed", 0, true).unwrap().is_empty());
+        let archived = store.list("adventure", "playing", 0, true).unwrap();
+        assert_eq!(archived.len(), 1);
+        assert_eq!(archived[0].id, game.id);
+        store.set_archived(&game.id, false).unwrap();
+        let restored = store.list("", "", 0, false).unwrap();
+        assert_eq!(restored[0].notes, "Keep this history");
+        assert_eq!(restored[0].rating, Some(4));
+        assert!(store.list("", "", 0, true).unwrap().is_empty());
+        assert_eq!(store.dashboard().unwrap().total, 1);
     }
 }

@@ -9,6 +9,7 @@ import {
 import type { Dashboard, Game, GameInput, Status } from './library-api';
 import license from '../LICENSE?raw';
 import './library.css';
+import Modal from './Modal';
 
 const emptyGame: GameInput = {
   id: null,
@@ -34,7 +35,9 @@ export default function Library() {
   const [editor, setEditor] = useState<GameInput | null>(null);
   const [about, setAbout] = useState(false);
   const [archived, setArchived] = useState<Game | null>(null);
-  const titleRef = useRef<HTMLInputElement>(null);
+  const [archiveView, setArchiveView] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
     let active = true;
     const timer = setTimeout(
@@ -42,7 +45,7 @@ export default function Library() {
         setLoading(true);
         setError('');
         Promise.all([
-          libraryApi.list(search, status, offset),
+          libraryApi.list(search, status, offset, archiveView),
           libraryApi.dashboard(),
         ])
           .then(([items, stats]) => {
@@ -64,10 +67,7 @@ export default function Library() {
       active = false;
       clearTimeout(timer);
     };
-  }, [search, status, offset, revision]);
-  useEffect(() => {
-    if (editor) titleRef.current?.focus();
-  }, [editor?.id, editor === null]);
+  }, [search, status, offset, revision, archiveView]);
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -86,14 +86,19 @@ export default function Library() {
     }
   }
   async function archive(game: Game, value: boolean) {
+    if (archiving) return;
+    setArchiving(true);
     setError('');
     try {
       await libraryApi.archive(game.id, value);
       setLoading(true);
       setArchived(value ? game : null);
+      setOffset(0);
       setRevision((v) => v + 1);
     } catch (reason) {
       setError(String(reason));
+    } finally {
+      setArchiving(false);
     }
   }
   async function support() {
@@ -109,15 +114,45 @@ export default function Library() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className="sidebar" inert={editor !== null || about}>
         <div className="brand-mark" aria-hidden="true">
           GT
         </div>
         <h1>Game Tracker</h1>
         <p className="muted">Your games. Your journey.</p>
         <nav aria-label="Main navigation">
-          <span className="nav-active">Library</span>
-          <button onClick={() => setAbout(true)}>About & support</button>
+          <button
+            className={!archiveView ? 'nav-active' : ''}
+            aria-current={!archiveView ? 'page' : undefined}
+            onClick={() => {
+              if (!archiveView) return;
+              setArchiveView(false);
+              setOffset(0);
+              setLoading(true);
+            }}
+          >
+            Library
+          </button>
+          <button
+            className={archiveView ? 'nav-active' : ''}
+            aria-current={archiveView ? 'page' : undefined}
+            onClick={() => {
+              if (archiveView) return;
+              setArchiveView(true);
+              setOffset(0);
+              setLoading(true);
+            }}
+          >
+            Archived games
+          </button>
+          <button
+            onClick={(event) => {
+              opener.current = event.currentTarget;
+              setAbout(true);
+            }}
+          >
+            About & support
+          </button>
         </nav>
         <div className="local-note">
           <span className="status-dot" /> Local library
@@ -125,7 +160,7 @@ export default function Library() {
           <small>Stored on this computer</small>
         </div>
       </aside>
-      <main>
+      <main inert={editor !== null || about}>
         <header>
           <div>
             <p className="eyebrow">YOUR COLLECTION</p>
@@ -136,7 +171,8 @@ export default function Library() {
           </div>
           <button
             className="primary"
-            onClick={() => {
+            onClick={(event) => {
+              opener.current = event.currentTarget;
               setError('');
               setEditor({ ...emptyGame });
             }}
@@ -157,7 +193,7 @@ export default function Library() {
             </div>
           ))}
         </section>
-        {error && (
+        {error && !editor && !about && (
           <div className="error" role="alert">
             {error}{' '}
             {!editor && (
@@ -168,14 +204,17 @@ export default function Library() {
         {archived && (
           <div className="notice" role="status">
             Archived {archived.title}.{' '}
-            <button onClick={() => archive(archived, false)}>
+            <button
+              disabled={archiving}
+              onClick={() => archive(archived, false)}
+            >
               Undo archive
             </button>
           </div>
         )}
         <section className="library" aria-label="Game library">
           <div className="toolbar">
-            <h3>Library</h3>
+            <h3>{archiveView ? 'Archived games' : 'Library'}</h3>
             <label className="search-label">
               Search games
               <input
@@ -217,12 +256,16 @@ export default function Library() {
               <h3>
                 {search || status
                   ? 'No matching games'
-                  : 'Your next chapter starts here'}
+                  : archiveView
+                    ? 'No archived games'
+                    : 'Your next chapter starts here'}
               </h3>
               <p>
                 {search || status
                   ? 'Try a different search or status.'
-                  : 'Add your first game to start building your library.'}
+                  : archiveView
+                    ? 'Archived games stay here until you restore them.'
+                    : 'Add your first game to start building your library.'}
               </p>
             </div>
           ) : (
@@ -243,7 +286,9 @@ export default function Library() {
                       <td>
                         <button
                           className="game-title"
-                          onClick={() => {
+                          disabled={archiveView}
+                          onClick={(event) => {
+                            opener.current = event.currentTarget;
                             setError('');
                             setEditor({ ...game });
                           }}
@@ -265,10 +310,11 @@ export default function Library() {
                       </td>
                       <td>
                         <button
-                          aria-label={`Archive ${game.title}`}
-                          onClick={() => archive(game, true)}
+                          aria-label={`${archiveView ? 'Restore' : 'Archive'} ${game.title}`}
+                          disabled={archiving}
+                          onClick={() => archive(game, !archiveView)}
                         >
-                          Archive
+                          {archiveView ? 'Restore' : 'Archive'}
                         </button>
                       </td>
                     </tr>
@@ -302,186 +348,185 @@ export default function Library() {
         </section>
       </main>
       {editor && (
-        <div className="overlay">
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="editor-title"
-            className="dialog"
-          >
-            <h2 id="editor-title">{editor.id ? 'Edit game' : 'Add game'}</h2>
-            <form onSubmit={save}>
+        <Modal
+          returnFocusTo={opener.current}
+          labelId="editor-title"
+          busy={saving}
+          onClose={() => setEditor(null)}
+        >
+          <h2 id="editor-title">{editor.id ? 'Edit game' : 'Add game'}</h2>
+          <form onSubmit={save}>
+            <label>
+              Title
+              <input
+                name="title"
+                required
+                maxLength={300}
+                value={editor.title}
+                onChange={(e) => change('title', e.target.value)}
+              />
+            </label>
+            <div className="form-grid">
               <label>
-                Title
+                Platform
                 <input
-                  ref={titleRef}
-                  name="title"
-                  required
-                  maxLength={300}
-                  value={editor.title}
-                  onChange={(e) => change('title', e.target.value)}
+                  name="platform"
+                  maxLength={100}
+                  placeholder="PC, PlayStation, Switch…"
+                  value={editor.platform}
+                  onChange={(e) => change('platform', e.target.value)}
                 />
               </label>
-              <div className="form-grid">
-                <label>
-                  Platform
-                  <input
-                    name="platform"
-                    maxLength={100}
-                    placeholder="PC, PlayStation, Switch…"
-                    value={editor.platform}
-                    onChange={(e) => change('platform', e.target.value)}
-                  />
-                </label>
-                <label>
-                  Status
-                  <select
-                    name="status"
-                    value={editor.status}
-                    onChange={(e) => {
-                      change('status', e.target.value as Status);
-                      if (e.target.value !== 'completed')
-                        change('completedOn', null);
-                    }}
-                  >
-                    {statuses.map((s) => (
-                      <option key={s} value={s}>
-                        {statusLabel(s)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Rating
-                  <select
-                    name="rating"
-                    value={editor.rating ?? ''}
-                    onChange={(e) =>
-                      change(
-                        'rating',
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
-                  >
-                    <option value="">Not rated</option>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <option key={n} value={n}>
-                        {n}/5
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Playtime (total minutes)
-                  <input
-                    name="minutes"
-                    type="number"
-                    min="0"
-                    max="60000000"
-                    step="1"
-                    value={
-                      editor.playtimeSeconds === null
-                        ? ''
-                        : Math.floor(editor.playtimeSeconds / 60)
-                    }
-                    onChange={(e) =>
-                      change(
-                        'playtimeSeconds',
-                        e.target.value === ''
-                          ? null
-                          : Number(e.target.value) * 60,
-                      )
-                    }
-                  />
-                </label>
-                <label>
-                  Platinum
-                  <select
-                    name="platinum"
-                    value={editor.platinumStatus}
-                    onChange={(e) => change('platinumStatus', e.target.value)}
-                  >
-                    <option value="not_achieved">Not achieved</option>
-                    <option value="planned">Planning to achieve</option>
-                    <option value="achieved">Achieved</option>
-                    <option value="not_applicable">Not applicable</option>
-                  </select>
-                </label>
-                <label>
-                  Completion date
-                  <input
-                    name="completedOn"
-                    type="date"
-                    disabled={editor.status !== 'completed'}
-                    value={editor.completedOn ?? ''}
-                    onChange={(e) =>
-                      change('completedOn', e.target.value || null)
-                    }
-                  />
-                </label>
-              </div>
               <label>
-                Notes
-                <textarea
-                  name="notes"
-                  rows={3}
-                  maxLength={10000}
-                  value={editor.notes}
-                  onChange={(e) => change('notes', e.target.value)}
+                Status
+                <select
+                  name="status"
+                  value={editor.status}
+                  onChange={(e) => {
+                    change('status', e.target.value as Status);
+                    if (e.target.value !== 'completed')
+                      change('completedOn', null);
+                  }}
+                >
+                  {statuses.map((s) => (
+                    <option key={s} value={s}>
+                      {statusLabel(s)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Rating
+                <select
+                  name="rating"
+                  value={editor.rating ?? ''}
+                  onChange={(e) =>
+                    change(
+                      'rating',
+                      e.target.value ? Number(e.target.value) : null,
+                    )
+                  }
+                >
+                  <option value="">Not rated</option>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <option key={n} value={n}>
+                      {n}/5
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Playtime (total minutes)
+                <input
+                  name="minutes"
+                  type="number"
+                  min="0"
+                  max="60000000"
+                  step="1"
+                  value={
+                    editor.playtimeSeconds === null
+                      ? ''
+                      : Math.floor(editor.playtimeSeconds / 60)
+                  }
+                  onChange={(e) =>
+                    change(
+                      'playtimeSeconds',
+                      e.target.value === ''
+                        ? null
+                        : Number(e.target.value) * 60,
+                    )
+                  }
                 />
               </label>
-              {error && <p className="error">{error}</p>}
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => setEditor(null)}
+              <label>
+                Platinum
+                <select
+                  name="platinum"
+                  value={editor.platinumStatus}
+                  onChange={(e) => change('platinumStatus', e.target.value)}
                 >
-                  Cancel
-                </button>
-                <button className="primary" disabled={saving}>
-                  {saving ? 'Saving…' : 'Save game'}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
-      {about && (
-        <div className="overlay">
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="about-title"
-            className="dialog"
-          >
-            <h2 id="about-title">About Game Tracker</h2>
-            <p>
-              A local-first game library, built with Rust, Tauri, React and
-              SQLite.
-            </p>
-            <p>Copyright © 2026 Matheus-Alves-Alexandre and contributors.</p>
-            <p>
-              Licensed under GNU AGPL-3.0-only. You may use, modify and
-              redistribute it under that license. Provided without warranty.
-            </p>
-            <details>
-              <summary>Read the license</summary>
-              <pre className="license">{license}</pre>
-            </details>
-            <p>Source code: github.com/Matheus-Alves-Alexandre/game-tracker</p>
-            <p>
-              Support development with an optional donation. All features remain
-              available.
-            </p>
+                  <option value="not_achieved">Not achieved</option>
+                  <option value="planned">Planning to achieve</option>
+                  <option value="achieved">Achieved</option>
+                  <option value="not_applicable">Not applicable</option>
+                </select>
+              </label>
+              <label>
+                Completion date
+                <input
+                  name="completedOn"
+                  type="date"
+                  disabled={editor.status !== 'completed'}
+                  value={editor.completedOn ?? ''}
+                  onChange={(e) =>
+                    change('completedOn', e.target.value || null)
+                  }
+                />
+              </label>
+            </div>
+            <label>
+              Notes
+              <textarea
+                name="notes"
+                rows={3}
+                maxLength={10000}
+                value={editor.notes}
+                onChange={(e) => change('notes', e.target.value)}
+              />
+            </label>
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
             <div className="dialog-actions">
-              <button onClick={() => setAbout(false)}>Close</button>
-              <button className="primary" onClick={support}>
-                Buy me a coffee ↗
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setEditor(null)}
+              >
+                Cancel
+              </button>
+              <button className="primary" disabled={saving}>
+                {saving ? 'Saving…' : 'Save game'}
               </button>
             </div>
-          </section>
-        </div>
+          </form>
+        </Modal>
+      )}
+      {about && (
+        <Modal
+          returnFocusTo={opener.current}
+          labelId="about-title"
+          onClose={() => setAbout(false)}
+        >
+          <h2 id="about-title">About Game Tracker</h2>
+          <p>
+            A local-first game library, built with Rust, Tauri, React and
+            SQLite.
+          </p>
+          <p>Copyright © 2026 Matheus-Alves-Alexandre and contributors.</p>
+          <p>
+            Licensed under GNU AGPL-3.0-only. You may use, modify and
+            redistribute it under that license. Provided without warranty.
+          </p>
+          <details>
+            <summary>Read the license</summary>
+            <pre className="license">{license}</pre>
+          </details>
+          <p>Source code: github.com/Matheus-Alves-Alexandre/game-tracker</p>
+          <p>
+            Support development with an optional donation. All features remain
+            available.
+          </p>
+          <div className="dialog-actions">
+            {error && <p role="alert">{error}</p>}
+            <button onClick={() => setAbout(false)}>Close</button>
+            <button className="primary" onClick={support}>
+              Buy me a coffee ↗
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

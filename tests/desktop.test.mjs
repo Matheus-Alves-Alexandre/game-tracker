@@ -116,6 +116,30 @@ test(
       driver = await connect();
       console.info('Native session created; entering a game.');
       await clickText('+ Add game');
+      assert.equal(
+        await driver.switchTo().activeElement().getAttribute('name'),
+        'title',
+      );
+      await driver
+        .switchTo()
+        .activeElement()
+        .sendKeys(Key.chord(Key.SHIFT, Key.TAB));
+      assert.equal(
+        await driver.switchTo().activeElement().getText(),
+        'Save game',
+      );
+      await driver.switchTo().activeElement().sendKeys(Key.TAB);
+      assert.equal(
+        await driver.switchTo().activeElement().getAttribute('name'),
+        'title',
+      );
+      await driver.switchTo().activeElement().sendKeys(Key.ESCAPE);
+      await waitForSave();
+      assert.equal(
+        await driver.switchTo().activeElement().getText(),
+        '+ Add game',
+      );
+      await clickText('+ Add game');
       await typeText(await driver.findElement(By.name('title')), title);
       await typeText(await driver.findElement(By.name('platform')), 'PC');
       await typeText(await driver.findElement(By.name('minutes')), '90');
@@ -156,6 +180,20 @@ test(
       await clickText('Cancel');
       const archiveButton = () =>
         driver.findElement(By.css(`button[aria-label="Archive ${title}"]`));
+      await (await archiveButton()).click();
+      await driver.navigate().refresh();
+      await clickText('Archived games');
+      await findGame(title);
+      await driver
+        .findElement(By.css(`button[aria-label="Restore ${title}"]`))
+        .click();
+      await clickText('Library');
+      await (await findGame(title)).click();
+      assert.equal(
+        await driver.findElement(By.name('notes')).getAttribute('value'),
+        'Persistence verified after reloading the interface.',
+      );
+      await clickText('Cancel');
       await (await archiveButton()).click();
       await driver.wait(
         until.elementLocated(

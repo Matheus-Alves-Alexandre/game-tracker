@@ -12,9 +12,11 @@ Track what you play, finish and return to. Keep your personal library on your ow
 
 ## Project status
 
-Early development. The first vertical slice supports creating and editing games, status and title/platform filters, optional ratings, playtime, completion dates, platinum goals, archival with immediate undo, and a persistent SQLite library. It is not the complete MVP yet.
+Early development. This branch supports creating and editing games, status and title/platform filters, optional ratings, playtime, completion dates, platinum goals, persistent archive recovery, keyboard-accessible dialogs and a persistent SQLite library. It is not the complete MVP yet.
 
 Spreadsheet import, sagas, backups, cover lookup, achievements synchronization and multilingual support are planned. No Steam or IGDB credentials are currently requested by the app. Memory targets are engineering goals, not published benchmark results.
+
+Signed in-app updates are [planned before stable installer distribution](docs/UPDATES.md); the current app does not update itself. See the [sprint plan](docs/SPRINTS.md) for reviewable increments.
 
 ## Features
 
