@@ -36,18 +36,6 @@ fn set_archived(state: tauri::State<AppState>, id: String, archived: bool) -> Re
         .set_archived(&id, archived)
 }
 #[tauri::command]
-fn set_game_status(
-    state: tauri::State<AppState>,
-    id: String,
-    status: String,
-) -> Result<(), String> {
-    state
-        .0
-        .lock()
-        .map_err(|_| "Restart the app to reconnect to your library.".to_string())?
-        .set_status(&id, &status)
-}
-#[tauri::command]
 fn get_dashboard(state: tauri::State<AppState>) -> Result<Dashboard, String> {
     state
         .0
@@ -78,7 +66,6 @@ pub fn run() {
             list_games,
             save_game,
             set_archived,
-            set_game_status,
             get_dashboard,
             open_support
         ])

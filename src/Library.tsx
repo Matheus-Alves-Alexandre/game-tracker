@@ -37,7 +37,6 @@ export default function Library() {
   const [archived, setArchived] = useState<Game | null>(null);
   const [archiveView, setArchiveView] = useState(false);
   const [archiving, setArchiving] = useState(false);
-  const [changingStatus, setChangingStatus] = useState(false);
   const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
     let active = true;
@@ -107,20 +106,6 @@ export default function Library() {
       await libraryApi.support();
     } catch (reason) {
       setError(String(reason));
-    }
-  }
-  async function updateStatus(game: Game, next: Status) {
-    if (changingStatus || next === game.status) return;
-    setChangingStatus(true);
-    setError('');
-    try {
-      await libraryApi.setStatus(game.id, next);
-      setLoading(true);
-      setRevision((value) => value + 1);
-    } catch (reason) {
-      setError(String(reason));
-    } finally {
-      setChangingStatus(false);
     }
   }
   function change<K extends keyof GameInput>(key: K, value: GameInput[K]) {
@@ -313,26 +298,9 @@ export default function Library() {
                         <small>{game.platform || 'Platform not set'}</small>
                       </td>
                       <td>
-                        {archiveView ? (
-                          <span className={`pill ${game.status}`}>
-                            {statusLabel(game.status)}
-                          </span>
-                        ) : (
-                          <select
-                            aria-label={`Status for ${game.title}`}
-                            value={game.status}
-                            disabled={changingStatus || archiving}
-                            onChange={(event) =>
-                              updateStatus(game, event.target.value as Status)
-                            }
-                          >
-                            {statuses.map((value) => (
-                              <option key={value} value={value}>
-                                {statusLabel(value)}
-                              </option>
-                            ))}
-                          </select>
-                        )}
+                        <span className={`pill ${game.status}`}>
+                          {statusLabel(game.status)}
+                        </span>
                       </td>
                       <td>{formatPlaytime(game.playtimeSeconds)}</td>
                       <td>

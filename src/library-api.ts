@@ -38,8 +38,6 @@ export const libraryApi = {
   save: (input: GameInput) => invoke<Game>('save_game', { input }),
   archive: (id: string, archived: boolean) =>
     invoke<void>('set_archived', { id, archived }),
-  setStatus: (id: string, status: Status) =>
-    invoke<void>('set_game_status', { id, status }),
   support: () => invoke<void>('open_support'),
 };
 export function formatPlaytime(seconds: number | null) {

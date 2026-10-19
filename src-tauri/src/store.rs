@@ -153,19 +153,6 @@ impl Store {
         }
         Ok(())
     }
-    pub fn set_status(&self, id: &str, status: &str) -> Result<(), String> {
-        if !STATUSES.contains(&status) {
-            return Err("Choose a valid game status.".into());
-        }
-        let changed = self.0.execute(
-            "UPDATE library_entries SET status=?1, completed_on=CASE WHEN ?1='completed' THEN completed_on ELSE NULL END WHERE id=?2 AND archived=0",
-            params![status, id],
-        ).map_err(|error| error.to_string())?;
-        if changed == 0 {
-            return Err("Game not found. Refresh the library.".into());
-        }
-        Ok(())
-    }
     pub fn dashboard(&self) -> Result<Dashboard, String> {
         self.0.query_row("SELECT COUNT(*), COALESCE(SUM(status='completed'),0), COALESCE(SUM(status='playing'),0), COALESCE(SUM(platinum_status='achieved'),0), AVG(rating) FROM library_entries WHERE archived=0", [], |row| Ok(Dashboard {
             total: row.get(0)?, completed: row.get(1)?, playing: row.get(2)?, platinum: row.get(3)?, average_rating: row.get(4)?,
@@ -304,38 +291,6 @@ mod tests {
         }
         assert_eq!(store.list("", "", 0, false).unwrap().len(), 100);
         assert_eq!(store.list("", "", 100, false).unwrap().len(), 5);
-    }
-
-    #[test]
-    fn quick_status_updates_preserve_details_and_keep_dates_consistent() {
-        let mut store = Store::open(Path::new(":memory:")).unwrap();
-        let mut original = input("Adventure");
-        original.notes = "Personal history".into();
-        original.rating = Some(4);
-        original.status = "completed".into();
-        original.completed_on = Some("2026-01-10".into());
-        let game = store.save(original).unwrap();
-        store.set_status(&game.id, "completed").unwrap();
-        assert_eq!(
-            store.list("", "", 0, false).unwrap()[0]
-                .completed_on
-                .as_deref(),
-            Some("2026-01-10")
-        );
-        assert!(store.set_status(&game.id, "invalid").is_err());
-        assert_eq!(store.dashboard().unwrap().completed, 1);
-        store.set_status(&game.id, "playing").unwrap();
-        let updated = &store.list("", "", 0, false).unwrap()[0];
-        assert_eq!(updated.status, "playing");
-        assert_eq!(updated.completed_on, None);
-        assert_eq!(updated.notes, "Personal history");
-        assert_eq!(updated.rating, Some(4));
-        assert_eq!(store.dashboard().unwrap().playing, 1);
-        store.set_status(&game.id, "completed").unwrap();
-        assert_eq!(store.list("", "", 0, false).unwrap()[0].completed_on, None);
-        store.set_archived(&game.id, true).unwrap();
-        assert!(store.set_status(&game.id, "playing").is_err());
-        assert!(store.set_status("missing", "playing").is_err());
     }
 
     #[test]
