@@ -14,6 +14,7 @@ import Home from './Home';
 import Cover from './Cover';
 import CatalogLookup from './CatalogLookup';
 import Settings from './Settings';
+import GameLists from './GameLists';
 import {
   House,
   LibraryBig,
@@ -54,6 +55,7 @@ export default function Library({
   const [editor, setEditor] = useState<GameInput | null>(null);
   const [about, setAbout] = useState(false);
   const [settingsView, setSettingsView] = useState(false);
+  const [listsView, setListsView] = useState(false);
   const [homeView, setHomeView] = useState(initialView === 'home');
   const [archived, setArchived] = useState<Game | null>(null);
   const [archiveView, setArchiveView] = useState(false);
@@ -143,10 +145,15 @@ export default function Library({
         <p className="muted">Your games. Your journey.</p>
         <nav aria-label="Main navigation">
           <button
-            className={homeView && !settingsView ? 'nav-active' : ''}
-            aria-current={homeView && !settingsView ? 'page' : undefined}
+            className={
+              homeView && !settingsView && !listsView ? 'nav-active' : ''
+            }
+            aria-current={
+              homeView && !settingsView && !listsView ? 'page' : undefined
+            }
             onClick={() => {
               setSettingsView(false);
+              setListsView(false);
               setHomeView(true);
             }}
           >
@@ -155,13 +162,18 @@ export default function Library({
           </button>
           <button
             className={
-              !archiveView && !homeView && !settingsView ? 'nav-active' : ''
+              !archiveView && !homeView && !settingsView && !listsView
+                ? 'nav-active'
+                : ''
             }
             aria-current={
-              !archiveView && !homeView && !settingsView ? 'page' : undefined
+              !archiveView && !homeView && !settingsView && !listsView
+                ? 'page'
+                : undefined
             }
             onClick={() => {
               setSettingsView(false);
+              setListsView(false);
               setHomeView(false);
               if (!archiveView) return;
               setArchiveView(false);
@@ -174,13 +186,18 @@ export default function Library({
           </button>
           <button
             className={
-              archiveView && !homeView && !settingsView ? 'nav-active' : ''
+              archiveView && !homeView && !settingsView && !listsView
+                ? 'nav-active'
+                : ''
             }
             aria-current={
-              archiveView && !homeView && !settingsView ? 'page' : undefined
+              archiveView && !homeView && !settingsView && !listsView
+                ? 'page'
+                : undefined
             }
             onClick={() => {
               setSettingsView(false);
+              setListsView(false);
               setHomeView(false);
               if (archiveView) return;
               setArchiveView(true);
@@ -191,12 +208,27 @@ export default function Library({
             <Archive size={18} />
             Archived games
           </button>
+          <button
+            className={listsView ? 'nav-active' : ''}
+            aria-current={listsView ? 'page' : undefined}
+            onClick={() => {
+              setListsView(true);
+              setSettingsView(false);
+              setHomeView(false);
+            }}
+          >
+            <LibraryBig size={18} />
+            Game lists
+          </button>
         </nav>
         <div className="sidebar-footer">
           <button
             className={settingsView ? 'nav-active' : ''}
             aria-current={settingsView ? 'page' : undefined}
-            onClick={() => setSettingsView(true)}
+            onClick={() => {
+              setListsView(false);
+              setSettingsView(true);
+            }}
           >
             <SettingsIcon size={19} />
             Settings
@@ -226,9 +258,11 @@ export default function Library({
             <h2>
               {settingsView
                 ? 'Settings'
-                : homeView
-                  ? 'Welcome back, player.'
-                  : 'Make room for your next adventure.'}
+                : listsView
+                  ? 'Your game lists'
+                  : homeView
+                    ? 'Welcome back, player.'
+                    : 'Make room for your next adventure.'}
             </h2>
             <p className="muted">
               {settingsView
@@ -236,7 +270,7 @@ export default function Library({
                 : 'Keep track of what you play, finish, and come back to.'}
             </p>
           </div>
-          {!settingsView && (
+          {!settingsView && !listsView && (
             <button
               className="primary"
               onClick={(event) => {
@@ -249,7 +283,7 @@ export default function Library({
             </button>
           )}
         </header>
-        {!homeView && !settingsView && (
+        {!homeView && !settingsView && !listsView && (
           <section className="stats" aria-label="Library overview">
             {[
               ['Games', dashboard?.total],
@@ -264,7 +298,7 @@ export default function Library({
             ))}
           </section>
         )}
-        {error && !editor && !about && !settingsView && (
+        {error && !editor && !about && !settingsView && !listsView && (
           <div className="error" role="alert">
             {error}{' '}
             {!editor && (
@@ -272,7 +306,7 @@ export default function Library({
             )}
           </div>
         )}
-        {archived && !settingsView && (
+        {archived && !settingsView && !listsView && (
           <div className="notice" role="status">
             Archived {archived.title}.{' '}
             <button
@@ -285,6 +319,16 @@ export default function Library({
         )}
         {settingsView ? (
           <Settings />
+        ) : listsView ? (
+          <GameLists
+            revision={revision}
+            onChanged={() => setRevision((v) => v + 1)}
+            onEdit={(game, element) => {
+              opener.current = element;
+              setError('');
+              setEditor({ ...game });
+            }}
+          />
         ) : homeView ? (
           <Home
             revision={revision}

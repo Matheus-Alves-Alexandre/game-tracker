@@ -1,0 +1,99 @@
+.list-create {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  margin: 1.5rem 0;
+}
+.list-create label {
+  flex: 1;
+}
+.lists-layout {
+  display: grid;
+  grid-template-columns: minmax(170px, 240px) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+.list-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.list-picker button {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.list-picker small,
+.list-members small {
+  display: block;
+  color: #9ba3b4;
+  margin-top: 0.3rem;
+}
+.list-detail {
+  min-width: 0;
+}
+.list-progress {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.3rem;
+  background: #2c2228;
+  border-radius: 18px;
+}
+.list-progress strong {
+  font-size: 1.5rem;
+  color: #f4cd7b;
+}
+.list-progress progress {
+  width: 100%;
+  accent-color: #ef996e;
+}
+.list-members {
+  padding: 0;
+  list-style: none;
+}
+.list-members li {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #ffffff18;
+}
+.list-members input {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex-shrink: 0;
+  accent-color: #ed9e75;
+}
+.list-members .game-cover {
+  width: 46px;
+  height: 64px;
+  flex-shrink: 0;
+}
+.list-members li > div:not(.game-cover) {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.game-lists details {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #ffffff20;
+  border-radius: 14px;
+}
+.game-lists form label {
+  margin: 0.7rem 0;
+}
+@media (max-width: 850px) {
+  .lists-layout {
+    grid-template-columns: 1fr;
+  }
+  .list-picker {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .list-members li {
+    flex-wrap: wrap;
+  }
+  .list-create {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

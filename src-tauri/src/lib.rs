@@ -1,7 +1,7 @@
 mod catalog;
 mod store;
 use std::sync::Mutex;
-use store::{Dashboard, Game, GameInput, Home, Store};
+use store::{Dashboard, Game, GameInput, GameList, Home, Store};
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 struct AppState(Mutex<Store>);
@@ -106,6 +106,86 @@ fn open_igdb_setup(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|_| "Could not open the browser. Visit dev.twitch.tv/console/apps.".into())
 }
 
+#[tauri::command]
+fn get_game_lists(state: tauri::State<AppState>) -> Result<Vec<GameList>, String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app.".to_string())?
+        .game_lists()
+}
+#[tauri::command]
+fn save_game_list(
+    state: tauri::State<AppState>,
+    id: Option<String>,
+    name: String,
+) -> Result<String, String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app.".to_string())?
+        .save_game_list(id, &name)
+}
+#[tauri::command]
+fn delete_game_list(state: tauri::State<AppState>, id: String) -> Result<(), String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app.".to_string())?
+        .delete_game_list(&id)
+}
+#[tauri::command]
+fn get_list_members(
+    state: tauri::State<AppState>,
+    id: String,
+    offset: u32,
+) -> Result<Vec<Game>, String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app.".to_string())?
+        .list_members(&id, offset)
+}
+#[tauri::command]
+fn add_list_game(
+    state: tauri::State<AppState>,
+    list_id: String,
+    entry_id: Option<String>,
+    title: String,
+    platform: String,
+) -> Result<(), String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app.".to_string())?
+        .add_list_game(&list_id, entry_id, &title, &platform)
+}
+#[tauri::command]
+fn remove_list_game(
+    state: tauri::State<AppState>,
+    list_id: String,
+    entry_id: String,
+) -> Result<(), String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app.".to_string())?
+        .remove_list_game(&list_id, &entry_id)
+}
+#[tauri::command]
+fn complete_list_game(
+    state: tauri::State<AppState>,
+    list_id: String,
+    entry_id: String,
+    completed: bool,
+) -> Result<(), String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app.".to_string())?
+        .complete_list_game(&list_id, &entry_id, completed)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -121,6 +201,13 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_game_lists,
+            save_game_list,
+            delete_game_list,
+            get_list_members,
+            add_list_game,
+            remove_list_game,
+            complete_list_game,
             list_games,
             save_game,
             set_archived,

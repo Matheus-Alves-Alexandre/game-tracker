@@ -317,8 +317,14 @@ mod tests {
                         Err(e) => panic!("test server did not receive expected request: {e}"),
                     }
                 };
+                // Windows can inherit the listener's nonblocking mode on accepted sockets.
+                // Keep accept bounded above, but wait for complete request chunks below.
+                stream.set_nonblocking(false).unwrap();
                 stream
                     .set_read_timeout(Some(Duration::from_secs(3)))
+                    .unwrap();
+                stream
+                    .set_write_timeout(Some(Duration::from_secs(3)))
                     .unwrap();
                 let mut request = Vec::new();
                 loop {
@@ -367,6 +373,38 @@ mod tests {
     }
     fn token() -> Vec<u8> {
         br#"{"access_token":"syntheticToken","expires_in":3600,"token_type":"bearer"}"#.to_vec()
+    }
+
+    #[test]
+    fn mock_server_waits_for_fragmented_request_body() {
+        let (catalog, requests, server) = mock_server(vec![(200, b"ok".to_vec())]);
+        let address = catalog
+            .token_url
+            .strip_prefix("http://")
+            .unwrap()
+            .split('/')
+            .next()
+            .unwrap();
+        let mut client = std::net::TcpStream::connect(address).unwrap();
+        client
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .unwrap();
+        client
+            .write_all(b"POST /token HTTP/1.1\r\nHost: localhost\r\nContent-Length: 6\r\n\r\nabc")
+            .unwrap();
+        // Let the server accept and read the first chunk before the rest arrives.
+        std::thread::sleep(Duration::from_millis(100));
+        client.write_all(b"def").unwrap();
+        let mut response = String::new();
+        client.read_to_string(&mut response).unwrap();
+        server.join().unwrap();
+        assert!(
+            requests
+                .recv_timeout(Duration::from_secs(1))
+                .unwrap()
+                .ends_with("abcdef")
+        );
+        assert!(response.ends_with("ok"));
     }
 
     #[test]

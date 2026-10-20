@@ -2,6 +2,9 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use uuid::Uuid;
+#[path = "lists.rs"]
+mod lists;
+pub use lists::GameList;
 
 const STATUSES: &[&str] = &["planned", "playing", "paused", "completed", "dropped"];
 const PLATINUM: &[&str] = &["not_achieved", "planned", "achieved", "not_applicable"];
@@ -71,16 +74,16 @@ impl Store {
     pub fn open(path: &Path) -> Result<Self, rusqlite::Error> {
         let mut connection = Connection::open(path)?;
         let version: u32 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
-        if version > 2 {
+        if version > 3 {
             return Err(rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
                 Some("This library was created by a newer version. Update Game Tracker.".into()),
             ));
         }
         connection.busy_timeout(std::time::Duration::from_secs(5))?;
-        if version == 1 && path != Path::new(":memory:") {
+        if (1..3).contains(&version) && path != Path::new(":memory:") {
             let backup =
-                path.with_file_name(format!("library-before-v2-{}.sqlite3", Uuid::new_v4()));
+                path.with_file_name(format!("library-before-v3-{}.sqlite3", Uuid::new_v4()));
             connection.execute("VACUUM INTO ?1", [backup.to_string_lossy().as_ref()])?;
         }
         connection.execute_batch("PRAGMA foreign_keys = ON;
@@ -103,6 +106,20 @@ impl Store {
                 ALTER TABLE games ADD COLUMN igdb_rating REAL;
                 ALTER TABLE games ADD COLUMN igdb_rating_count INTEGER;
                 PRAGMA user_version = 2;",
+            )?;
+            migration.commit()?;
+        }
+        if version < 3 {
+            let migration = connection.transaction()?;
+            migration.execute_batch(
+                "CREATE TABLE game_lists (id TEXT PRIMARY KEY, name TEXT NOT NULL);
+                CREATE TABLE game_list_entries (
+                    list_id TEXT NOT NULL REFERENCES game_lists(id) ON DELETE CASCADE,
+                    entry_id TEXT NOT NULL REFERENCES library_entries(id) ON DELETE CASCADE,
+                    position INTEGER NOT NULL,
+                    PRIMARY KEY(list_id, entry_id));
+                CREATE INDEX list_entry_lookup ON game_list_entries(entry_id);
+                PRAGMA user_version=3;",
             )?;
             migration.commit()?;
         }
@@ -460,7 +477,7 @@ mod tests {
                 p.file_name()
                     .unwrap()
                     .to_string_lossy()
-                    .starts_with("library-before-v2-")
+                    .starts_with("library-before-v3-")
             })
             .collect();
         assert_eq!(backups.len(), 1);

@@ -6,16 +6,16 @@ Desktop window, persistent game records, edit, search, status filtering, ratings
 
 ## MVP backlog
 
-1. Keyboard/modal accessibility and persistent archive recovery (implemented in sprint 1; awaiting maintainer review).
+1. Keyboard/modal accessibility and persistent archive recovery (implemented in sprint 1).
 2. Backup, validation and restore before real-data migration.
 3. Spreadsheet preview and import with field mapping, original-value provenance and idempotency.
 4. Tags and console/execution-method separation.
-5. Sagas with ordered items, reviewed matching and consistent progress.
+5. Saga checklists and custom lists with shared progress (implemented on the game-lists branch); manual reordering and franchise discovery remain planned.
 6. Annual completion statistics and explicit missing-data coverage.
 7. Planned-game priorities and CSV export.
 8. Measure memory/CPU and validate installed Windows updates.
 
-Implemented on the catalog/home branch: optional IGDB edition lookup, selected-cover disk caching, personal home cards and explicit metric coverage. Live authentication still requires the owner's own Twitch developer application. Local cover selection, a full library grid and OS-protected persistent credentials are future increments. Keep core features offline. Later: achievements synchronization, replay sessions, annual goals, custom lists, portable packaging and additional operating systems.
+Implemented on the catalog/home branch: optional IGDB edition lookup, selected-cover disk caching, personal home cards and explicit metric coverage. Live authentication still requires the owner's own Twitch developer application. Local cover selection, a full library grid and OS-protected persistent credentials are future increments. Keep core features offline. Later: achievements synchronization, replay sessions, annual goals, portable packaging and additional operating systems.
 
 ## Product rules
 

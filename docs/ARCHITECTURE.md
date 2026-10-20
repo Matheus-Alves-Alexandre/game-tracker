@@ -4,7 +4,7 @@
 
 One installed application, one local SQLite database, one repository. React renders the interface; typed Tauri IPC commands connect it to Rust. Validation and data integrity belong in Rust even when the UI also validates. There is no HTTP backend, cloud account or microservice requirement.
 
-The current vertical slice separates UI, IPC contracts, desktop command handlers and SQLite storage. Split Rust domain and storage modules further as sagas, import and backups arrive. Keep each business rule owned in one place. Do not introduce a service framework or dependency injection container for an embedded local store.
+The current vertical slice separates UI, IPC contracts, desktop command handlers and SQLite storage. List operations live in a dedicated Rust storage module. Split other domain and storage modules as import and backups arrive. Keep each business rule owned in one place. Do not introduce a service framework or dependency injection container for an embedded local store.
 
 ## Current data model
 
@@ -12,7 +12,8 @@ The current vertical slice separates UI, IPC contracts, desktop command handlers
 - `library_entries`: personal status, platform label, optional rating, duration in seconds, completion date, platinum goal, notes and archive state.
 - One personal entry per game is enforced in this first schema. Replays and multi-platform copies need a deliberate later migration, not duplicated title-based keys.
 - SQLite foreign keys and constraints complement Rust validation. Updates use transactions. Queries return no more than 100 entries at a time.
-- Schema version 2 adds catalog metadata through a transaction. Existing version-1 libraries receive a SQLite snapshot beside the database before migration. Unsupported newer versions are refused without downgrading.
+- `game_lists` and `game_list_entries`: named checklists referencing personal library entries, in addition order. Completion derives from the shared library status, including archived members.
+- Schema version 3 adds list tables and foreign keys; version 2 introduced catalog metadata. Existing version-1/2 libraries receive a SQLite snapshot beside the database before migration. Unsupported newer versions are refused without downgrading.
 
 ## Planned modules
 
