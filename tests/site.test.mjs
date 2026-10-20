@@ -18,19 +18,16 @@ const asset = {
   browser_download_url: `https://github.com/Matheus-Alves-Alexandre/game-tracker/releases/download/v0.1.0/${installerName}`,
 };
 
-test('the download points to the stable latest asset after a published release', async () => {
+test('the download points to the exact published installer', async () => {
   const dom = new JSDOM(html);
   const document = dom.window.document;
   await loadLatestRelease(document, async () => ({
     ok: true,
-    json: async () => ({ tag_name: 'v0.1.0', assets: [asset] }),
+    json: async () => [{ tag_name: 'v0.1.0', assets: [asset] }],
   }));
   const button = document.getElementById('download-button');
   assert.equal(button.getAttribute('aria-disabled'), null);
-  assert.equal(
-    button.href,
-    `https://github.com/Matheus-Alves-Alexandre/game-tracker/releases/latest/download/${installerName}`,
-  );
+  assert.equal(button.href, asset.browser_download_url);
   assert.match(
     document.getElementById('release-version').textContent,
     /v0.1.0/,
@@ -67,5 +64,52 @@ test('release lookup failures keep a useful GitHub fallback', async () => {
     }),
     null,
   );
-  assert.equal(findInstaller({ prerelease: true, assets: [asset] }), null);
+  assert.equal(findInstaller({ draft: true, assets: [asset] }), null);
+});
+
+test('development previews use their exact asset and are labeled visibly', async () => {
+  const dom = new JSDOM(html);
+  const preview = {
+    ...asset,
+    browser_download_url: asset.browser_download_url.replace(
+      'v0.1.0/',
+      'v0.1.0-alpha.42/',
+    ),
+  };
+  await loadLatestRelease(dom.window.document, async () => ({
+    ok: true,
+    json: async () => [
+      { draft: true, tag_name: 'draft', assets: [asset] },
+      { prerelease: true, tag_name: 'v0.1.0-alpha.42', assets: [preview] },
+      { tag_name: 'v0.1.0', assets: [asset] },
+    ],
+  }));
+  assert.equal(
+    dom.window.document.getElementById('download-button').href,
+    preview.browser_download_url,
+  );
+  assert.match(
+    dom.window.document.getElementById('release-version').textContent,
+    /PREVIEW/,
+  );
+  assert.match(
+    dom.window.document.getElementById('release-status').textContent,
+    /do not update automatically/,
+  );
+});
+
+test('empty releases and malformed assets never offer an invented installer', async () => {
+  const dom = new JSDOM(html);
+  await loadLatestRelease(dom.window.document, async () => ({
+    ok: true,
+    json: async () => [],
+  }));
+  assert.equal(
+    dom.window.document.getElementById('download-button').hasAttribute('href'),
+    false,
+  );
+  assert.equal(
+    findInstaller({ assets: [{ ...asset, browser_download_url: 'broken' }] }),
+    null,
+  );
 });

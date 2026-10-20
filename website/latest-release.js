@@ -3,11 +3,15 @@ export const installerName = 'game-tracker-windows-x64-setup.exe';
 const releasesUrl = `https://github.com/${repository}/releases`;
 
 export function findInstaller(release) {
-  if (release.draft || release.prerelease || !Array.isArray(release.assets))
-    return null;
+  if (release.draft || !Array.isArray(release.assets)) return null;
   const asset = release.assets.find((item) => item.name === installerName);
   if (!asset || !Number.isFinite(asset.size) || asset.size <= 0) return null;
-  const url = new URL(asset.browser_download_url);
+  let url;
+  try {
+    url = new URL(asset.browser_download_url);
+  } catch {
+    return null;
+  }
   if (
     url.origin !== 'https://github.com' ||
     !url.pathname.startsWith(`/${repository}/releases/download/`)
@@ -22,7 +26,7 @@ export async function loadLatestRelease(document, fetcher = fetch) {
   const version = document.getElementById('release-version');
   try {
     const response = await fetcher(
-      `https://api.github.com/repos/${repository}/releases/latest`,
+      `https://api.github.com/repos/${repository}/releases?per_page=30`,
       {
         headers: { Accept: 'application/vnd.github+json' },
         signal: AbortSignal.timeout(8000),
@@ -35,12 +39,19 @@ export async function loadLatestRelease(document, fetcher = fetch) {
       return;
     }
     if (!response.ok) throw new Error('Release lookup unavailable');
-    const release = await response.json();
+    const releases = await response.json();
+    if (!Array.isArray(releases)) throw new Error('Invalid release response');
+    const release = releases.find((item) => findInstaller(item));
+    if (!release) {
+      button.textContent = 'First release coming soon';
+      status.textContent =
+        'No Windows installer has been published yet. View the source on GitHub.';
+      return;
+    }
     const installer = findInstaller(release);
-    if (!installer) throw new Error('No verified Windows installer available');
-    version.textContent = `${release.tag_name} · WINDOWS X64`;
-    status.textContent = `${(installer.size / (1024 * 1024)).toFixed(1)} MB installer · Download the latest published version.`;
-    button.href = `${releasesUrl}/latest/download/${installerName}`;
+    version.textContent = `${release.tag_name}${release.prerelease ? ' · PREVIEW' : ''} · WINDOWS X64`;
+    status.textContent = `${(installer.size / (1024 * 1024)).toFixed(1)} MB installer · ${release.prerelease ? 'Development preview. Early unsigned build; installed apps do not update automatically.' : 'Download the latest published version.'}`;
+    button.href = installer.browser_download_url;
     button.textContent = 'Download for Windows ↓';
     button.removeAttribute('aria-disabled');
     button.removeAttribute('tabindex');

@@ -4,7 +4,7 @@ Status: planned distribution milestone. The current app does not check for or in
 
 ## Distribution paths
 
-Installed Windows users will receive stable releases through Tauri's updater. Source users pull reviewed Git changes, install locked dependencies and rebuild. Development commits do not automatically become public installer releases.
+Installed Windows users will receive stable releases through Tauri's updater. Source users pull reviewed Git changes, install locked dependencies and rebuild. Successful main push CI runs generate clearly labeled unsigned development previews through the [release workflow](RELEASES.md). These previews require manual installation; stable signed updates remain a separate milestone.
 
 The existing website follows the latest GitHub Release. Add an updater manifest and signed artifacts to that same release. Manifest URLs must identify the exact versioned artifact, not a moving download that could resolve to different bytes.
 

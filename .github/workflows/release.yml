@@ -1,74 +1,137 @@
 name: Release
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
-      version:
-        description: Existing package version to release (without v)
+      ci_run_id:
+        description: Successful main push CI run ID to retry
         required: true
         type: string
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: release
   cancel-in-progress: false
 jobs:
-  checks:
-    if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/ci.yml
   publish:
-    needs: checks
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
       contents: write
+      actions: read
     steps:
+      - name: Select successful CI revision
+        id: candidate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_RUN_ID: ${{ inputs.ci_run_id || github.event.workflow_run.id }}
+        run: |
+          if ($env:GITHUB_REF -ne 'refs/heads/main') { throw 'Run releases from main only.' }
+          if ($env:REQUESTED_RUN_ID -notmatch '^\d+$') { throw 'Invalid CI run ID.' }
+          $run = gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:REQUESTED_RUN_ID" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot read CI run.' }
+          if ($run.path -ne '.github/workflows/ci.yml' -or $run.event -ne 'push' -or $run.head_branch -ne 'main' -or $run.head_repository.full_name -ne $env:GITHUB_REPOSITORY -or $run.conclusion -ne 'success') { throw 'A successful repository main push CI is required.' }
+          $mainSha = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha
+          if ($LASTEXITCODE -ne 0 -or $mainSha -ne $run.head_sha) { throw 'main moved; wait for its current CI.' }
+          "sha=$($run.head_sha)" >> $env:GITHUB_OUTPUT
+          "number=$($run.run_number)" >> $env:GITHUB_OUTPUT
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ steps.candidate.outputs.sha }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '24'
           cache: npm
-      - run: rustup toolchain install stable --profile minimal
-      - run: npm ci
-      - name: Validate version and exact main revision
+      - name: Prepare unique preview version
+        id: version
         shell: pwsh
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          CI_RUN_NUMBER: ${{ steps.candidate.outputs.number }}
+          SOURCE_SHA: ${{ steps.candidate.outputs.sha }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          node scripts/release-version.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $version = (Get-Content package.json | ConvertFrom-Json).version
-          $tauriVersion = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
-          $cargoVersion = (Select-String -Path src-tauri/Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
-          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+$' -or $env:RELEASE_VERSION -ne $version -or $version -ne $tauriVersion -or $version -ne $cargoVersion) { throw 'Release version must match all package manifests.' }
-          $mainSha = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha
-          if ($LASTEXITCODE -ne 0 -or $mainSha -ne $env:GITHUB_SHA) { throw 'main changed; rerun checks on its current revision.' }
+          "value=$version" >> $env:GITHUB_OUTPUT
+          $existing = gh release view "v$version" --repo $env:GITHUB_REPOSITORY --json isDraft 2>$null | ConvertFrom-Json
+          if ($LASTEXITCODE -eq 0) {
+            if ($existing.isDraft) { "draft=true" >> $env:GITHUB_OUTPUT }
+            else { "exists=true" >> $env:GITHUB_OUTPUT }
+          }
+          exit 0
+      - if: steps.version.outputs.exists != 'true'
+        run: rustup toolchain install stable --profile minimal
+      - if: steps.version.outputs.exists != 'true'
+        run: npm ci
       - name: Build installer and corresponding source
+        if: steps.version.outputs.exists != 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path reports,artifacts -Force | Out-Null
           npm run desktop:build 2>&1 | Tee-Object reports/release-build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git archive --format=zip --output=artifacts/game-tracker-source.zip HEAD
+          git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $sourceTree = git write-tree
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git archive --format=zip --output=artifacts/game-tracker-source.zip $sourceTree
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $installers = @(Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe)
           if ($installers.Count -ne 1) { throw 'Expected exactly one Windows installer.' }
           Copy-Item -LiteralPath $installers[0].FullName -Destination artifacts/game-tracker-windows-x64-setup.exe
-      - name: Publish verified release
+      - name: Publish complete preview release
+        if: steps.version.outputs.exists != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+          SOURCE_SHA: ${{ steps.candidate.outputs.sha }}
+          EXISTING_DRAFT: ${{ steps.version.outputs.draft }}
         run: |
           $mainSha = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha
-          if ($LASTEXITCODE -ne 0 -or $mainSha -ne $env:GITHUB_SHA) { throw 'main changed during build; publication blocked.' }
-          $files = Get-ChildItem artifacts -File | Select-Object -ExpandProperty FullName
+          if ($LASTEXITCODE -ne 0 -or $mainSha -ne $env:SOURCE_SHA) { throw 'main changed during build; publication blocked.' }
+          $notes = @"
+          Automated development preview from verified main commit $env:SOURCE_SHA.
+
+          This is an early, unsigned Windows installer. Installed apps do not update themselves yet. Back up your library before upgrading; database migrations can prevent downgrading.
+
+          The corresponding source archive includes the generated preview version in all package manifests. The tag identifies the reviewed source commit before this version-only build adjustment.
+          "@
+          Set-Content -LiteralPath artifacts/release-notes.md -Value $notes
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git tag -a "v$env:RELEASE_VERSION" $env:GITHUB_SHA -m "Game Tracker v$env:RELEASE_VERSION"
+          $tag = "v$env:RELEASE_VERSION"
+          $remoteTag = git ls-remote --tags origin "refs/tags/$tag"
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect release tag.' }
+          if (-not $remoteTag) {
+            git tag -a $tag $env:SOURCE_SHA -m "Game Tracker $tag"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            git push origin "refs/tags/$tag"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            git fetch origin "refs/tags/$tag:refs/tags/$tag"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $tagSha = git rev-list -n 1 $tag
+            if ($LASTEXITCODE -ne 0 -or $tagSha -ne $env:SOURCE_SHA) { throw 'Existing tag points elsewhere.' }
+          }
+          if ($env:EXISTING_DRAFT -ne 'true') {
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --verify-tag --target $env:SOURCE_SHA --title "Game Tracker $tag (Preview)" --prerelease --draft --notes-file artifacts/release-notes.md
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          gh release upload $tag artifacts/game-tracker-windows-x64-setup.exe artifacts/game-tracker-source.zip --repo $env:GITHUB_REPOSITORY --clobber
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git push origin "refs/tags/v$env:RELEASE_VERSION"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          gh release create "v$env:RELEASE_VERSION" @files --verify-tag --target $env:GITHUB_SHA --title "Game Tracker v$env:RELEASE_VERSION" --generate-notes
+          gh release edit $tag --repo $env:GITHUB_REPOSITORY --draft=false
           exit $LASTEXITCODE
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()

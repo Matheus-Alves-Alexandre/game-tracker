@@ -4,7 +4,7 @@ The English project website is static HTML, CSS and a small JavaScript module un
 
 The page queries the public GitHub Releases API once when opened. Before the first release, the download control clearly says that the first release is not available yet. On network or API errors, it offers the repository's release list instead of inventing a version or a download URL.
 
-Published Windows installers must use the stable asset name `game-tracker-windows-x64-setup.exe`. GitHub's `/releases/latest/download/<asset-name>` redirect then resolves to the most recent published release. This avoids changing the website for each release. The release workflow still checks the selected version, runs all mandatory checks, verifies the exact main SHA, builds the installer and packages corresponding source before publishing anything.
+Published Windows installers use the asset name `game-tracker-windows-x64-setup.exe`. The website queries the release list and uses the exact validated asset URL from the newest available published installer, including clearly labeled development previews. Drafts and invalid assets are excluded. A successful main push CI triggers the [automated preview workflow](RELEASES.md); published artifacts include matching source and a unique preview version.
 
 The website's sample library is explicitly fictional. It must not be replaced with the owner's personal spreadsheet or database. No analytics, accounts or payment processing are embedded. The support link opens the owner's Buy Me a Coffee page.
 
