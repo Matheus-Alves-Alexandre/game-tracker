@@ -102,7 +102,7 @@ The native test uses a separate application identifier, creates a uniquely named
 - Separate required checks for frontend, backend and the native Windows application.
 - Test reports, screenshots and diagnostic logs retained for **14 days**.
 - A required aggregate check fails if any required job fails or is cancelled.
-- The release workflow reruns all checks on the selected `main` commit before building or publishing an installer and corresponding source archive.
+- After successful main push CI, the release workflow automatically builds a uniquely versioned development preview and matching source archive from that exact revision. See [release automation](docs/RELEASES.md).
 - Repository protection and log retention must also be applied in GitHub settings; workflow files alone do not protect a branch. The repository setup script verifies those settings.
 
 The [project website](https://matheus-alves-alexandre.github.io/game-tracker/) deploys through GitHub Pages after a successful CI push run on `main`. Its download button follows the latest published installer automatically. Before the first release, it clearly displays that no installer is published yet. This updates the website download; it does not automatically update an installed app. See [website and release flow](docs/WEBSITE.md).

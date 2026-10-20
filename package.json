@@ -16,7 +16,7 @@
     "test:ui": "vitest run --reporter=default --reporter=junit --outputFile.junit=reports/frontend.xml",
     "test:backend": "node scripts/cargo.mjs test --manifest-path src-tauri/Cargo.toml --locked",
     "test:desktop": "node --test tests/desktop.test.mjs",
-    "test:site": "node --test tests/site.test.mjs",
+    "test:site": "node --test tests/site.test.mjs tests/release.test.mjs",
     "check": "tsc --noEmit",
     "format": "prettier --write src scripts tests *.json *.ts *.md .github website docs",
     "format:check": "prettier --check src scripts tests *.json *.ts *.md .github website docs"
