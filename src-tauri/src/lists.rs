@@ -10,6 +10,72 @@ pub struct GameList {
 }
 
 impl Store {
+    pub fn import_saga(
+        &mut self,
+        list_id: &str,
+        games: Vec<crate::catalog::Candidate>,
+        platform: &str,
+    ) -> Result<u32, String> {
+        if games.is_empty()
+            || games.len() > 100
+            || platform.trim().is_empty()
+            || platform.chars().count() > 100
+            || platform.chars().any(char::is_control)
+        {
+            return Err("Select 1-100 games and enter a platform (up to 100 characters).".into());
+        }
+        for game in &games {
+            validate(&GameInput {
+                id: None,
+                title: game.name.clone(),
+                platform: platform.into(),
+                status: "planned".into(),
+                rating: None,
+                playtime_seconds: None,
+                completed_on: None,
+                platinum_status: "not_achieved".into(),
+                notes: String::new(),
+                igdb_id: Some(game.id),
+                cover_image_id: game.cover_image_id.clone(),
+                igdb_rating: game.community_rating,
+                igdb_rating_count: Some(
+                    u32::try_from(game.rating_count).map_err(|_| "Invalid rating count.")?,
+                ),
+            })?;
+        }
+        let tx = self.0.transaction().map_err(|e| e.to_string())?;
+        let exists: bool = tx
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM game_lists WHERE id=?1)",
+                [list_id],
+                |r| r.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if !exists {
+            return Err("List not found.".into());
+        }
+        let mut added = 0;
+        for game in games {
+            let rating_count =
+                u32::try_from(game.rating_count).map_err(|_| "Invalid rating count.")?;
+            let entry:Option<String>=tx.query_row("SELECT e.id FROM library_entries e JOIN games g ON g.id=e.game_id
+                WHERE e.platform=?3 COLLATE NOCASE AND (g.igdb_id=?1 OR (g.igdb_id IS NULL AND g.title=?2 COLLATE NOCASE))
+                ORDER BY (g.igdb_id=?1) DESC,e.archived,e.id LIMIT 1",params![game.id,game.name.trim(),platform.trim()],|r|r.get(0)).optional().map_err(|e|e.to_string())?;
+            let entry_id = if let Some(id) = entry {
+                tx.execute("UPDATE games SET igdb_id=?1,cover_image_id=?2,igdb_rating=?3,igdb_rating_count=?4 WHERE id=(SELECT game_id FROM library_entries WHERE id=?5) AND igdb_id IS NULL",params![game.id,game.cover_image_id,game.community_rating,rating_count,id]).map_err(|e|e.to_string())?;
+                id
+            } else {
+                let gid = Uuid::new_v4().to_string();
+                let id = Uuid::new_v4().to_string();
+                tx.execute("INSERT INTO games(id,title,igdb_id,cover_image_id,igdb_rating,igdb_rating_count) VALUES(?1,?2,?3,?4,?5,?6)",params![gid,game.name.trim(),game.id,game.cover_image_id,game.community_rating,rating_count]).map_err(|e|e.to_string())?;
+                tx.execute("INSERT INTO library_entries(id,game_id,platform,status,platinum_status) VALUES(?1,?2,?3,'planned','not_achieved')",params![id,gid,platform.trim()]).map_err(|e|e.to_string())?;
+                id
+            };
+            added+=tx.execute("INSERT INTO game_list_entries(list_id,entry_id,position) VALUES(?1,?2,COALESCE((SELECT MAX(position)+1 FROM game_list_entries WHERE list_id=?1),0)) ON CONFLICT(list_id,entry_id) DO NOTHING",params![list_id,entry_id]).map_err(|e|e.to_string())? as u32;
+        }
+        tx.commit().map_err(|e| e.to_string())?;
+        Ok(added)
+    }
     pub fn game_lists(&self) -> Result<Vec<GameList>, String> {
         let mut statement = self
             .0
@@ -169,6 +235,70 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn candidate(id: i64, name: &str) -> crate::catalog::Candidate {
+        crate::catalog::Candidate {
+            id,
+            name: name.into(),
+            cover_image_id: Some("co_test".into()),
+            released_at: None,
+            platforms: vec![],
+            community_rating: Some(80.0),
+            rating_count: 4,
+        }
+    }
+    #[test]
+    fn saga_import_is_atomic_repeatable_and_keeps_personal_progress() {
+        let mut store = Store::open(Path::new(":memory:")).unwrap();
+        let list = store.save_game_list(None, "Saga").unwrap();
+        store
+            .add_list_game(&list, None, "Existing game", "PC")
+            .unwrap();
+        store.0.execute("UPDATE library_entries SET status='completed',rating=5,notes='Keep my review',playtime_seconds=600",[]).unwrap();
+        assert_eq!(
+            store
+                .import_saga(
+                    &list,
+                    vec![candidate(1, "Existing game"), candidate(2, "New game")],
+                    "PC"
+                )
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            store
+                .import_saga(
+                    &list,
+                    vec![candidate(1, "Renamed in IGDB"), candidate(2, "New game")],
+                    "pc"
+                )
+                .unwrap(),
+            0
+        );
+        let games = store.list_members(&list, 0).unwrap();
+        assert_eq!(games.len(), 2);
+        assert_eq!(games[0].status, "completed");
+        assert_eq!(games[0].notes, "Keep my review");
+        assert_eq!(games[0].rating, Some(5));
+        assert_eq!(games[0].playtime_seconds, Some(600));
+        assert_eq!(games[0].igdb_id, Some(1));
+        assert_eq!(games[1].status, "planned");
+        assert!(
+            store
+                .import_saga(
+                    &list,
+                    vec![candidate(3, "Good"), candidate(-1, "Bad")],
+                    "PC"
+                )
+                .is_err()
+        );
+        assert!(
+            store
+                .import_saga("missing", vec![candidate(4, "Orphan")], "PC")
+                .is_err()
+        );
+        assert_eq!(store.dashboard().unwrap().total, 2);
+    }
 
     #[test]
     fn completion_is_shared_persisted_and_removal_keeps_library_records() {

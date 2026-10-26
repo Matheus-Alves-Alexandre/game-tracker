@@ -285,6 +285,62 @@ test(
         await driver.takeScreenshot(),
         'base64',
       );
+      // Exercise the new batch command through native IPC without real IGDB credentials.
+      const imported = await driver.executeAsyncScript(
+        async function (name, candidateId, done) {
+          try {
+            const invoke = window.__TAURI_INTERNALS__.invoke;
+            const lists = await invoke('get_game_lists');
+            const list = lists.find((item) => item.name === name);
+            const added = await invoke('import_saga_games', {
+              listId: list.id,
+              platform: 'PC',
+              games: [
+                {
+                  id: candidateId,
+                  name: 'Synthetic saga member',
+                  coverImageId: null,
+                  releasedAt: null,
+                  platforms: ['PC'],
+                  communityRating: null,
+                  ratingCount: 0,
+                },
+              ],
+            });
+            done({ added });
+          } catch (error) {
+            done({ error: String(error) });
+          }
+        },
+        listName,
+        Number.parseInt(randomUUID().slice(0, 8), 16),
+      );
+      assert.equal(imported.error, undefined);
+      assert.equal(imported.added, 1);
+      await driver.navigate().refresh();
+      await clickText('Game lists');
+      await (
+        await driver.wait(
+          until.elementLocated(
+            By.xpath(
+              `//nav[@aria-label='Your lists']//button[strong='${listName}']`,
+            ),
+          ),
+          10000,
+        )
+      ).click();
+      await driver.wait(
+        until.elementLocated(By.xpath("//strong[.='50% completed']")),
+        10000,
+      );
+      await driver
+        .findElement(By.xpath("//summary[.='Find a saga on IGDB']"))
+        .click();
+      assert.ok(
+        (await driver.findElement(By.css('body')).getText()).includes(
+          'Connect Twitch / IGDB in Settings first.',
+        ),
+      );
       await clickText('Delete list');
       await clickText('Confirm delete list');
       await driver.wait(
