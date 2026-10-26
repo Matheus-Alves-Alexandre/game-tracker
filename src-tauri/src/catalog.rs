@@ -7,6 +7,10 @@ use std::{
 };
 use tokio::sync::Mutex;
 
+#[path = "catalog_sagas.rs"]
+mod sagas;
+pub use sagas::{SagaGroup, SagaPage};
+
 const IMAGE_LIMIT: usize = 2 * 1024 * 1024;
 struct Session {
     client_id: String,
@@ -127,6 +131,15 @@ impl Catalog {
     }
     pub async fn search(&self, title: &str) -> Result<Vec<Candidate>, String> {
         let query = search_query(title)?;
+        let games: Vec<ApiGame> = self.request(query).await?;
+        Ok(games
+            .into_iter()
+            .filter(valid_game)
+            .take(8)
+            .map(to_candidate)
+            .collect())
+    }
+    async fn request<T: serde::de::DeserializeOwned>(&self, query: String) -> Result<T, String> {
         let mut session = self.session.lock().await;
         let Some(auth) = session.as_ref().filter(|s| s.expires > Instant::now()) else {
             *session = None;
@@ -161,29 +174,8 @@ impl Catalog {
             }
             _ => {}
         }
-        let games: Vec<ApiGame> = serde_json::from_slice(&bounded(response, 256 * 1024).await?)
-            .map_err(|_| "IGDB returned an unexpected response.")?;
-        Ok(games
-            .into_iter()
-            .filter(|g| g.id > 0 && !g.name.trim().is_empty() && g.name.chars().count() <= 300)
-            .take(8)
-            .map(|g| Candidate {
-                id: g.id,
-                name: g.name,
-                cover_image_id: g.cover.map(|c| c.image_id).filter(|id| valid_image_id(id)),
-                released_at: g.first_release_date,
-                platforms: g
-                    .platforms
-                    .into_iter()
-                    .take(20)
-                    .map(|p| p.name.chars().take(100).collect())
-                    .collect(),
-                community_rating: g
-                    .rating
-                    .filter(|r| r.is_finite() && (0.0..=100.0).contains(r)),
-                rating_count: g.rating_count,
-            })
-            .collect())
+        serde_json::from_slice(&bounded(response, 256 * 1024).await?)
+            .map_err(|_| "IGDB returned an unexpected response.".into())
     }
     pub async fn cache_cover(&self, directory: &Path, image_id: &str) -> Result<(), String> {
         if !valid_image_id(image_id) {
@@ -232,6 +224,27 @@ fn credential(value: &str) -> bool {
 }
 fn jpeg(bytes: &[u8]) -> bool {
     bytes.starts_with(&[0xff, 0xd8, 0xff]) && bytes.ends_with(&[0xff, 0xd9])
+}
+fn to_candidate(g: ApiGame) -> Candidate {
+    Candidate {
+        id: g.id,
+        name: g.name,
+        cover_image_id: g.cover.map(|c| c.image_id).filter(|id| valid_image_id(id)),
+        released_at: g.first_release_date,
+        platforms: g
+            .platforms
+            .into_iter()
+            .take(20)
+            .map(|p| p.name.chars().take(100).collect())
+            .collect(),
+        community_rating: g
+            .rating
+            .filter(|r| r.is_finite() && (0.0..=100.0).contains(r)),
+        rating_count: g.rating_count,
+    }
+}
+fn valid_game(g: &ApiGame) -> bool {
+    g.id > 0 && !g.name.trim().is_empty() && g.name.chars().count() <= 200
 }
 fn search_query(value: &str) -> Result<String, String> {
     let value = value.trim();
@@ -373,6 +386,47 @@ mod tests {
     }
     fn token() -> Vec<u8> {
         br#"{"access_token":"syntheticToken","expires_in":3600,"token_type":"bearer"}"#.to_vec()
+    }
+
+    #[test]
+    fn discovers_sagas_and_pages_members_without_exposing_secrets() {
+        let seeds=br#"[{"collections":[{"id":7,"name":"Borderlands"}],"franchises":[{"id":9,"name":"Borderlands universe"}],"franchise":{"id":9,"name":"Borderlands universe"}}]"#.to_vec();
+        let rows:Vec<_>=(1..=100).map(|id|serde_json::json!({"id":id,"name":format!("Game {id}"),"game_type":{"type":"Main Game"}})).collect();
+        let (catalog, requests, server) = mock_server(vec![
+            (200, token()),
+            (200, seeds),
+            (200, serde_json::to_vec(&rows).unwrap()),
+            (200, b"[]".to_vec()),
+        ]);
+        runtime().block_on(async {
+            catalog
+                .connect("syntheticClient".into(), "syntheticSecret".into())
+                .await
+                .unwrap();
+            let groups = catalog.search_sagas("Borderlands").await.unwrap();
+            assert_eq!(groups.len(), 2);
+            assert_eq!(groups[0].id, 7);
+            let page = catalog.saga_games("collection", 7, 0).await.unwrap();
+            assert_eq!(page.games.len(), 100);
+            assert_eq!(page.next_offset, Some(100));
+            assert_eq!(page.games[0].kind, "Main Game");
+            assert!(
+                catalog
+                    .saga_games("collection", 7, 100)
+                    .await
+                    .unwrap()
+                    .next_offset
+                    .is_none()
+            );
+            assert!(catalog.saga_games("games;", 7, 0).await.is_err());
+            assert!(catalog.saga_games("collection", -1, 0).await.is_err());
+            assert!(catalog.saga_games("collection", 7, 2000).await.is_err());
+        });
+        server.join().unwrap();
+        let requests: Vec<_> = requests.into_iter().collect();
+        assert!(requests[2].contains("collections = (7)"));
+        assert!(requests[3].contains("offset 100"));
+        assert!(!requests[2].contains("syntheticSecret"));
     }
 
     #[test]

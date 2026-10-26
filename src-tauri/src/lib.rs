@@ -186,6 +186,36 @@ fn complete_list_game(
         .complete_list_game(&list_id, &entry_id, completed)
 }
 
+#[tauri::command]
+async fn search_sagas(
+    state: tauri::State<'_, catalog::Catalog>,
+    title: String,
+) -> Result<Vec<catalog::SagaGroup>, String> {
+    state.search_sagas(&title).await
+}
+#[tauri::command]
+async fn get_saga_games(
+    state: tauri::State<'_, catalog::Catalog>,
+    kind: String,
+    id: i64,
+    offset: u32,
+) -> Result<catalog::SagaPage, String> {
+    state.saga_games(&kind, id, offset).await
+}
+#[tauri::command]
+fn import_saga_games(
+    state: tauri::State<AppState>,
+    list_id: String,
+    games: Vec<catalog::Candidate>,
+    platform: String,
+) -> Result<u32, String> {
+    state
+        .0
+        .lock()
+        .map_err(|_| "Restart the app.".to_string())?
+        .import_saga(&list_id, games, &platform)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -201,6 +231,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            search_sagas,
+            get_saga_games,
+            import_saga_games,
             get_game_lists,
             save_game_list,
             delete_game_list,

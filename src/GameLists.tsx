@@ -3,6 +3,7 @@ import { libraryApi, listsApi } from './library-api';
 import type { Game, GameList } from './library-api';
 import Cover from './Cover';
 import './lists.css';
+import SagaImport from './SagaImport';
 
 export default function GameLists({
   revision,
@@ -262,7 +263,10 @@ export default function GameLists({
                           )
                         }
                       />
-                      <Cover imageId={game.coverImageId ?? null} />
+                      <Cover
+                        key={`${game.id}-${revision}`}
+                        imageId={game.coverImageId ?? null}
+                      />
                       <div>
                         <strong>{game.title}</strong>
                         <small>
@@ -381,6 +385,11 @@ export default function GameLists({
                 </button>
               </form>
             </details>
+            <SagaImport
+              key={selected}
+              listId={selected}
+              onChanged={onChanged}
+            />
           </div>
         ) : (
           <p className="empty">Choose a list to view its games and progress.</p>
