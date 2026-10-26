@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { libraryApi, listsApi } from './library-api';
 import type { Game, GameList } from './library-api';
 import Cover from './Cover';
+import Modal from './Modal';
+import { createPortal } from 'react-dom';
 import './lists.css';
 
 export default function GameLists({
@@ -27,6 +29,7 @@ export default function GameLists({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const deleteOpener = useRef<HTMLElement | null>(null);
   const [renaming, setRenaming] = useState(false);
   const current = lists.find((list) => list.id === selected);
   useEffect(() => {
@@ -89,6 +92,7 @@ export default function GameLists({
     : 0;
   return (
     <section
+      inert={deleting}
       aria-label="Game lists"
       className="game-lists"
       aria-busy={busy || loading}
@@ -97,7 +101,7 @@ export default function GameLists({
         Build a saga checklist or plan your next adventures. Each game stays
         linked to your library.
       </p>
-      {error && (
+      {error && !deleting && (
         <div role="alert" className="error">
           {error}{' '}
           <button
@@ -175,7 +179,14 @@ export default function GameLists({
               >
                 Rename list
               </button>
-              <button disabled={busy} onClick={() => setDeleting(!deleting)}>
+              <button
+                disabled={busy}
+                onClick={(event) => {
+                  deleteOpener.current = event.currentTarget;
+                  setError('');
+                  setDeleting(true);
+                }}
+              >
                 Delete list
               </button>
             </div>
@@ -201,23 +212,6 @@ export default function GameLists({
                 </label>
                 <button disabled={busy}>Save list name</button>
               </form>
-            )}
-            {deleting && (
-              <div className="notice">
-                Delete this list? Your library games will be kept.{' '}
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void mutate(async () => {
-                      await listsApi.delete(selected);
-                      setSelected('');
-                      setDeleting(false);
-                    })
-                  }
-                >
-                  Confirm delete list
-                </button>
-              </div>
             )}
             <div className="list-progress">
               <strong>{percent}% completed</strong>
@@ -386,6 +380,45 @@ export default function GameLists({
           <p className="empty">Choose a list to view its games and progress.</p>
         )}
       </div>
+      {deleting &&
+        current &&
+        createPortal(
+          <Modal
+            labelId="delete-list-title"
+            busy={busy}
+            returnFocusTo={deleteOpener.current}
+            onClose={() => setDeleting(false)}
+          >
+            <h2 id="delete-list-title">Delete list?</h2>
+            <p>
+              Delete “{current.name}”? This removes the list only. Your library
+              games, notes and progress will be kept.
+            </p>
+            {error && (
+              <div role="alert" className="error">
+                {error}
+              </div>
+            )}
+            <div className="dialog-actions">
+              <button disabled={busy} onClick={() => setDeleting(false)}>
+                Cancel
+              </button>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void mutate(async () => {
+                    await listsApi.delete(current.id);
+                    setSelected('');
+                    setDeleting(false);
+                  })
+                }
+              >
+                {busy ? 'Deleting…' : 'Confirm delete list'}
+              </button>
+            </div>
+          </Modal>,
+          document.body,
+        )}
     </section>
   );
 }
