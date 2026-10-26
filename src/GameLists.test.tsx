@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { listsApi } from './library-api';
@@ -32,6 +32,64 @@ beforeEach(() => {
     { id: 'saga', name: 'DMC saga', total: 2, completed: 1 },
   ]);
   vi.mocked(listsApi.members).mockResolvedValue([game] as never);
+});
+
+test('list deletion requires popup confirmation and supports cancel and Escape', async () => {
+  const user = userEvent.setup();
+  const changed = vi.fn();
+  render(<GameLists revision={0} onChanged={changed} onEdit={vi.fn()} />);
+  await user.click(await screen.findByRole('button', { name: /DMC saga/ }));
+  const opener = screen.getByRole('button', { name: 'Delete list' });
+  await user.click(opener);
+  const dialog = screen.getByRole('dialog', { name: 'Delete list?' });
+  expect(
+    within(dialog).getByText(
+      /Your library games, notes and progress will be kept/,
+    ),
+  ).toBeInTheDocument();
+  expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  expect(listsApi.delete).not.toHaveBeenCalled();
+  await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(opener).toHaveFocus();
+  await user.click(opener);
+  await user.keyboard('{Escape}');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(listsApi.delete).not.toHaveBeenCalled();
+  let finish!: () => void;
+  vi.mocked(listsApi.delete).mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await user.click(opener);
+  await user.click(screen.getByRole('button', { name: 'Confirm delete list' }));
+  expect(listsApi.delete).toHaveBeenCalledExactlyOnceWith('saga');
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  await user.keyboard('{Escape}');
+  expect(screen.getByRole('dialog')).toHaveAttribute('aria-busy', 'true');
+  await act(async () => finish());
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(changed).toHaveBeenCalled();
+});
+
+test('failed deletion leaves the popup open with a retryable error', async () => {
+  const user = userEvent.setup();
+  vi.mocked(listsApi.delete).mockRejectedValue('Could not delete list');
+  const changed = vi.fn();
+  render(<GameLists revision={0} onChanged={changed} onEdit={vi.fn()} />);
+  await user.click(await screen.findByRole('button', { name: /DMC saga/ }));
+  await user.click(screen.getByRole('button', { name: 'Delete list' }));
+  await user.click(screen.getByRole('button', { name: 'Confirm delete list' }));
+  const dialog = screen.getByRole('dialog');
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+    'Could not delete list',
+  );
+  expect(
+    within(dialog).getByRole('button', { name: 'Confirm delete list' }),
+  ).toBeEnabled();
+  expect(changed).not.toHaveBeenCalled();
 });
 test('shows progress and only changes the shared completion flag through IPC', async () => {
   const user = userEvent.setup();
